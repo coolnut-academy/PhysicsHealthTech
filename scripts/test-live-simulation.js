@@ -136,13 +136,14 @@ async function callGas(action, payload, sessionToken = null) {
     if (!matrixRes.ok) {
       console.error('❌ Teacher matrix fetch failed:', matrixRes.error);
     } else {
-      console.log(`  ✔ Matrix fetched successfully! (Total students: ${matrixRes.data.students.length})`);
-      const testStudentRow = matrixRes.data.students.find(s => s.code_5_digit === '99999');
+      const studentList = matrixRes.data.rows || matrixRes.data.students || [];
+      console.log(`  ✔ Matrix fetched successfully! (Total students: ${studentList.length})`);
+      const testStudentRow = studentList.find(s => s.code_5_digit === '99999');
       if (testStudentRow) {
         console.log(`  ✔ Found Student 99999 in Teacher Gradebook!`);
         console.log(`     - Name: ${testStudentRow.display_name}`);
         console.log(`     - Roll No: ${testStudentRow.roll_no}`);
-        const w01Cell = testStudentRow.worksheet_cells.find(cell => cell.worksheet_code === 'PHT4-W01');
+        const w01Cell = (testStudentRow.worksheet_cells || testStudentRow.cells || []).find(cell => cell.worksheet_code === 'PHT4-W01');
         console.log(`     - Worksheet PHT4-W01 Status in Teacher Matrix: ${w01Cell ? w01Cell.status_label_th : 'N/A'}`);
       }
     }

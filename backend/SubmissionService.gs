@@ -13,6 +13,67 @@
 
 const SubmissionService = {
   /**
+   * High-Performance Single-Roundtrip Batch Submission
+   * Combines begin, file uploads and complete into a single atomic operation
+   */
+  submitBatch(session, payload, repository) {
+    const studentUid = Authorization.enforceStudent(session);
+    const { worksheet_code, academic_year_id, grade, note, files } = payload || {};
+
+    if (!worksheet_code || !academic_year_id || !grade || !files || !Array.isArray(files) || files.length === 0) {
+      throw new Error("INVALID_REQUEST: ข้อมูลการส่งใบงานไม่ครบถ้วน");
+    }
+
+    const year = repository.findAcademicYear(academic_year_id);
+    if (!year || year.state === "archived") {
+      throw new Error("YEAR_ARCHIVED: ปีการศึกษานี้ถูกปิดรับการส่งงานแล้ว");
+    }
+
+    const opId = `op_up_${AuthService.generateSecureToken().substring(0, 16)}`;
+    const operation = {
+      operation_id: opId,
+      actor_uid: studentUid,
+      action: "SUBMISSION_UPLOAD_BATCH",
+      target_type: "Worksheet",
+      target_id: worksheet_code,
+      state: "completed",
+      created_at: new Date().toISOString()
+    };
+    repository.saveOperation(operation);
+
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const normalizedMime = (f.mime_type || "image/jpeg").toLowerCase().trim();
+      const evidenceId = `ev_${AuthService.generateSecureToken().substring(0, 16)}`;
+      const driveFileId = repository.saveFileToStaging({
+        evidence_id: evidenceId,
+        file_name: f.file_name || `page_${i + 1}.jpg`,
+        mime_type: normalizedMime,
+        file_base64: f.file_base64,
+        student_uid: studentUid
+      });
+      const stagedFile = {
+        evidence_id: evidenceId,
+        upload_op_id: opId,
+        drive_file_id: driveFileId,
+        mime_type: normalizedMime,
+        size_bytes: Math.round(((f.file_base64 || "").length * 3) / 4),
+        storage_state: "staged",
+        uploaded_at: new Date().toISOString()
+      };
+      repository.saveStagedFile(stagedFile);
+    }
+
+    return this.completeSubmission(session, {
+      upload_op_id: opId,
+      worksheet_code,
+      academic_year_id,
+      grade,
+      note
+    }, repository);
+  },
+
+  /**
    * Begin upload transaction
    */
   beginUpload(session, payload, repository) {

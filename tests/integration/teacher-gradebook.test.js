@@ -41,7 +41,7 @@ function runTeacherGradebookTests() {
   const loginStudent = AuthService.studentLogin("00007", "PhtSecret#00007A", repo);
   const studentToken = loginStudent.data.session_token;
 
-  const loginTeacher = AuthService.teacherLogin({ auth_secret: "TeacherAuthSecret#1001" }, repo);
+  const loginTeacher = AuthService.teacherLogin({ auth_secret: "coolnut1618" }, repo);
   const teacherToken = loginTeacher.data.session_token;
 
   // Test 1 (AC03 & GR25): Teacher matrix sorted numerically by roll_no (1, 2, 10)

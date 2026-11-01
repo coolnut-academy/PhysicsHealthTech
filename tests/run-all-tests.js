@@ -18,7 +18,7 @@ console.log("===============================================================");
 console.log("     PhysicsHealthTech V2.0 - Comprehensive Test Suite         ");
 console.log("===============================================================\n");
 
-let totalSuites = 9;
+let totalSuites = 10;
 let passedSuites = 0;
 
 try {
@@ -47,6 +47,10 @@ try {
   passedSuites++;
 
   runRevisionImmutabilityTests();
+  passedSuites++;
+
+  console.log("▶ Running UI, Mobile & A4 Compression Checks...");
+  require("./test-ui-improvements");
   passedSuites++;
 
   console.log("===============================================================");

@@ -39,7 +39,7 @@ function runStudentDashboardTests() {
   const loginStudent = AuthService.studentLogin("00007", "PhtSecret#00007A", repo);
   const studentToken = loginStudent.data.session_token;
 
-  const loginTeacher = AuthService.teacherLogin({ auth_secret: "TeacherAuthSecret#1001" }, repo);
+  const loginTeacher = AuthService.teacherLogin({ auth_secret: "coolnut1618" }, repo);
   const teacherToken = loginTeacher.data.session_token;
 
   // Test 1: Initial Dashboard (Not submitted)
@@ -191,6 +191,30 @@ function runStudentDashboardTests() {
     assert.strictEqual(cardW01.status_label_th, "ส่งแล้ว — รอตรวจ");
     assert.strictEqual(cardW01.submission_latest_version_no, 2);
     assert.strictEqual(cardW01.has_history, true);
+  }
+
+  // Test 5: Single-Roundtrip Batch Upload (submissions.submitBatch)
+  {
+    console.log("  - Test: High-performance single-roundtrip batch upload (submissions.submitBatch)");
+    const batchRes = api({
+      action: "submissions.submitBatch",
+      session_token: studentToken,
+      payload: {
+        worksheet_code: "PHT4-W02",
+        academic_year_id: "yr_2570",
+        grade: "M4",
+        note: "ส่งใบงานที่ 2 ผ่าน submitBatch",
+        files: [
+          { file_name: "page1.jpg", mime_type: "image/jpeg", file_base64: "base64page1" },
+          { file_name: "page2.jpg", mime_type: "image/jpeg", file_base64: "base64page2" }
+        ]
+      }
+    }, repo);
+
+    assert.strictEqual(batchRes.ok, true);
+    assert.strictEqual(batchRes.data.version_no, 1);
+    assert.strictEqual(batchRes.data.files_count, 2);
+    assert.ok(batchRes.request_id);
   }
 
   console.log("✔ All Student Dashboard Integration Tests Passed!\n");

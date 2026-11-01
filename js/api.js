@@ -47,6 +47,9 @@ class ApiClient {
    * @returns {Promise<Object>} Response envelope { ok: boolean, data?: any, error?: any }
    */
   async call(action, payload = {}) {
+    if (window.app && typeof window.app.startProgress === "function") {
+      window.app.startProgress();
+    }
     const envelope = {
       action,
       request_id: `req_${Date.now()}_${Math.random().toString(16).substring(2, 8)}`,
@@ -57,30 +60,52 @@ class ApiClient {
     // 1. If GAS Web App URL is configured and not forced to demo
     const gasUrl = window.CONFIG.getApiUrl();
     if (gasUrl && !window.CONFIG.isDemoMode()) {
-      try {
-        // Send POST as text/plain to avoid CORS preflight OPTIONS request on Apps Script
-        const res = await fetch(gasUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "text/plain;charset=utf-8"
-          },
-          body: JSON.stringify(envelope)
-        });
+      const maxRetries = 2;
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          if (attempt > 0) {
+            console.log(`[API Retry] กำลังลองเชื่อมต่อใหม่ครั้งที่ ${attempt}/${maxRetries} สำหรับ: ${action}...`);
+            await new Promise(r => setTimeout(r, attempt * 1000));
+          }
 
-        if (!res.ok) {
-          throw new Error(`HTTP_${res.status}: ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ Google Apps Script ได้`);
+          // Send POST as text/plain to avoid CORS preflight OPTIONS request on Apps Script
+          const res = await fetch(gasUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(envelope)
+          });
+
+          if (!res.ok) {
+            throw new Error(`HTTP_${res.status}: ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ Google Apps Script ได้ (รหัสสถานะ: ${res.status})`);
+          }
+
+          const data = await res.json();
+          if (window.app && typeof window.app.completeProgress === "function") {
+            window.app.completeProgress();
+          }
+          return data;
+        } catch (err) {
+          if (attempt === maxRetries) {
+            console.warn("GAS WebApp call failed after retries, falling back to local engine if enabled:", err);
+            if (window.app && typeof window.app.completeProgress === "function") {
+              window.app.completeProgress();
+            }
+            throw new Error(err.message || "ไม่สามารถเชื่อมต่อระบบได้ โปรดตรวจสอบสัญญาณอินเทอร์เน็ต");
+          }
         }
-
-        const data = await res.json();
-        return data;
-      } catch (err) {
-        console.warn("GAS WebApp call failed, falling back to local engine if enabled:", err);
-        throw err;
       }
     }
 
     // 2. Demo / Mock Engine Fallback (Immediate local testing)
-    return this.dispatchMock(action, payload);
+    try {
+      return await this.dispatchMock(action, payload);
+    } finally {
+      if (window.app && typeof window.app.completeProgress === "function") {
+        window.app.completeProgress();
+      }
+    }
   }
 
   /**

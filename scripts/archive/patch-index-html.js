@@ -1,0 +1,476 @@
+const fs = require('fs');
+const path = require('path');
+
+const indexHtml = `<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PhysicsHealthTech — ระบบส่งใบงานและประเมินผลฟิสิกส์สุขภาพ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Top Global Progress Loading Bar -->
+  <div id="top-progress-bar"></div>
+
+  <!-- Background Interactive Physics Canvas -->
+  <canvas id="physics-bg-canvas"></canvas>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="brand-area">
+      <div class="brand-logo-badge-container">
+        <img src="assets/logo.png" alt="PhysicsHealthTech Logo" class="brand-logo-img">
+      </div>
+      <div class="brand-text-block">
+        <div class="brand-title">
+          PHYSICS HEALTH TECH
+          <span class="brand-badge">ฟิสิกส์สุขภาพ</span>
+        </div>
+        <div class="brand-subtitle">ระบบส่งใบงานและติดตามผลการเรียนรู้</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- User Profile Tag -->
+      <div id="user-header-info" class="user-badge" style="display:none">
+        <span id="user-display-name">สมชาย มั่นใจ</span>
+        <span id="user-role-tag" class="role-tag">STUDENT</span>
+        <button id="btn-logout" class="btn btn-secondary btn-sm" title="ออกจากระบบ"><i data-lucide="log-out"></i> ออกจากระบบ</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+
+    <!-- 1. AUTHENTICATION VIEW -->
+    <section id="view-auth" class="auth-section">
+      <div class="card auth-card">
+        <div style="text-align:center;margin-bottom:20px">
+          <div class="auth-brand-logo-wrap">
+            <img src="assets/logo.png" alt="PhysicsHealthTech Logo" class="auth-logo-img">
+          </div>
+          <h2 style="font-family:var(--font-hud);font-size:22px;font-weight:700">เข้าสู่ระบบ</h2>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:4px">ระบบส่งใบงานและติดตามผลการเรียนรู้ วิชาฟิสิกส์สุขภาพ</p>
+        </div>
+
+        <!-- Role Toggle Buttons -->
+        <div class="auth-role-tabs">
+          <button id="btn-tab-student-login" class="btn btn-primary" style="flex:1"><i data-lucide="user"></i> นักเรียน</button>
+          <button id="btn-tab-teacher-login" class="btn btn-secondary" style="flex:1"><i data-lucide="graduation-cap"></i> ครูผู้สอน</button>
+        </div>
+
+        <!-- Error Alert Box -->
+        <div id="auth-error-box" style="display:none" class="alert-box-error"></div>
+
+        <!-- Student Login Form -->
+        <form id="form-student-login">
+          <div class="form-group">
+            <label class="form-label" for="student-code">รหัสนักเรียน 5 หลัก</label>
+            <input type="text" id="student-code" class="form-control" placeholder="กรอกรหัส 5 หลัก (เช่น 17763)" maxlength="5" inputmode="numeric" required style="font-family:var(--font-mono);font-size:22px;letter-spacing:4px;text-align:center;font-weight:700">
+            <div class="form-hint" style="text-align:center;margin-top:8px">กรอกรหัสนักเรียน 5 หลักประจำตัวเพื่อเข้าสู่ระบบ</div>
+          </div>
+          <button type="submit" id="btn-submit-student-login" class="btn btn-primary" style="width:100%;margin-top:12px;padding:12px;font-size:16px;font-weight:700">
+            <span class="btn-text">เข้าสู่ระบบ</span>
+          </button>
+        </form>
+
+        <!-- Teacher Login Form -->
+        <form id="form-teacher-login" style="display:none">
+          <div class="form-group">
+            <label class="form-label" for="teacher-secret">รหัสผ่านครูผู้สอน</label>
+            <input type="password" id="teacher-secret" class="form-control" placeholder="กรอกรหัสผ่านครูผู้สอน" required style="font-size:15px">
+          </div>
+          <button type="submit" id="btn-submit-teacher-login" class="btn btn-primary" style="width:100%;margin-top:12px;padding:12px;font-size:16px;font-weight:700">
+            <span class="btn-text">เข้าสู่ระบบครูผู้สอน</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 2. STUDENT PORTAL VIEW (MOBILE OPTIMIZED VERTICAL DASHBOARD) -->
+    <section id="view-student-portal" style="display:none">
+      <!-- Profile Banner -->
+      <div id="student-profile-banner"></div>
+
+      <!-- Enrollment Context & Syllabus Info -->
+      <div class="student-context-bar">
+        <div id="student-enrollment-context" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <!-- Dynamically populated: Grade badge & Year switcher -->
+        </div>
+        <div class="syllabus-badge">
+          <span>หลักสูตร: 20 คาบเรียน (100 นาที/ครั้ง) • คะแนนเต็ม 100 คะแนน</span>
+        </div>
+      </div>
+
+      <!-- 4 High-Tech Metric HUD Cards (Optimized for Mobile Portrait 2x2 Grid) -->
+      <div class="score-summary-grid">
+        <div class="metric-card">
+          <div class="metric-label">
+            <i data-lucide="check-check" style="color:var(--cyan-neon)"></i>
+            <span>คะแนนที่ตรวจแล้ว</span>
+          </div>
+          <div class="metric-value">
+            <span id="metric-earned-score" style="color:var(--cyan-neon)">0.0 / 0.0</span>
+          </div>
+          <div class="metric-note">คะแนนจากใบงานที่ครูตรวจแล้ว</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            <i data-lucide="award" style="color:var(--emerald-bio)"></i>
+            <span>คะแนนสะสมรวม</span>
+          </div>
+          <div class="metric-value">
+            <span id="metric-accumulated-score" style="color:var(--emerald-bio)">0.0 / 100</span>
+          </div>
+          <div class="metric-note">คะแนนเก็บสะสมปัจจุบัน (เต็ม 100)</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            <i data-lucide="clock" style="color:var(--amber-warn)"></i>
+            <span>งานที่รอตรวจ</span>
+          </div>
+          <div class="metric-value">
+            <span id="metric-pending-tasks" style="color:var(--amber-warn)">0 งาน</span>
+          </div>
+          <div class="metric-note">ส่งแล้ว รอคุณครูตรวจประเมิน</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            <i data-lucide="sparkles" style="color:var(--violet-quantum)"></i>
+            <span>คะแนนความเรียบร้อย</span>
+          </div>
+          <div class="metric-value">
+            <span id="metric-bonus-score" style="color:var(--violet-quantum)">+0.0</span>
+          </div>
+          <div class="metric-note">คะแนนพิเศษจากการตกแต่ง</div>
+        </div>
+      </div>
+
+      <!-- Submission Progress Bar HUD -->
+      <div class="card progress-card">
+        <div style="display:flex;justify-content:space-between;font-family:var(--font-hud);font-size:13px;font-weight:600;margin-bottom:8px">
+          <span id="progress-text" style="color:var(--text-cyan)">ความคืบหน้าการส่งใบงาน</span>
+          <span style="color:var(--text-muted)">เป้าหมาย: 9 ใบงาน</span>
+        </div>
+        <div style="width:100%;height:10px;background:rgba(15,23,42,0.8);border:1px solid var(--border-glass);border-radius:var(--radius-full);overflow:hidden">
+          <div id="progress-bar-fill" style="width:0%;height:100%;background:linear-gradient(90deg, #00f0ff, #6366f1);border-radius:var(--radius-full);box-shadow:0 0 10px var(--cyan-glow);transition:width 0.4s ease"></div>
+        </div>
+      </div>
+
+      <!-- Filter Chips & Section Header -->
+      <div class="worksheets-section-header">
+        <h3 style="font-family:var(--font-hud);font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px">
+          <i data-lucide="folder-kanban" style="color:var(--cyan-neon)"></i> รายการใบงานปฏิบัติการ (ใบงานที่ 1 - 9)
+        </h3>
+        <!-- Mobile & Desktop Filter Chips -->
+        <div class="worksheet-filter-tabs">
+          <button class="filter-chip active" data-filter="all"><i data-lucide="layers"></i> ทั้งหมด (<span id="filter-count-all">9</span>)</button>
+          <button class="filter-chip" data-filter="not_submitted"><i data-lucide="file-minus"></i> ยังไม่ส่ง (<span id="filter-count-not-submitted">0</span>)</button>
+          <button class="filter-chip" data-filter="submitted"><i data-lucide="clock"></i> รอตรวจ (<span id="filter-count-submitted">0</span>)</button>
+          <button class="filter-chip" data-filter="graded"><i data-lucide="badge-check"></i> ตรวจแล้ว (<span id="filter-count-graded">0</span>)</button>
+        </div>
+      </div>
+
+      <!-- 9 Worksheets Grid -->
+      <div id="student-worksheets-container" class="worksheet-grid"></div>
+    </section>
+
+    <!-- 3. TEACHER WORKSPACE VIEW -->
+    <section id="view-teacher-workspace" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:14px">
+        <div>
+          <h2 style="font-family:var(--font-hud);font-size:22px;font-weight:700;color:#fff">
+            สมุดบันทึกคะแนนและตรวจงาน (TEACHER GRADEBOOK)
+          </h2>
+          <div style="font-size:13px;color:var(--text-muted)">ตรวจหลักฐาน ให้คะแนนรายภารกิจ รายบุคคลและห้องเรียน</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="btn-download-template" class="btn btn-secondary btn-sm" title="ดาวน์โหลดไฟล์แม่แบบ CSV สำหรับกรอกข้อมูลนักเรียน"><i data-lucide="download"></i> โหลดเทมเพลต (CSV)</button>
+          <button id="btn-import-roster" class="btn btn-primary btn-sm" title="เปิดปีการศึกษาใหม่ หรือ นำเข้ารายชื่อนักเรียน"><i data-lucide="user-plus"></i> นำเข้ารายชื่อ / เปิดปีใหม่</button>
+          <button id="btn-export-gradebook" class="btn btn-secondary btn-sm"><i data-lucide="file-spreadsheet"></i> ส่งออกคะแนน (CSV)</button>
+        </div>
+      </div>
+
+      <!-- Filters Bar -->
+      <div class="card" style="padding:16px 20px;margin-bottom:20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+        <div>
+          <label style="font-family:var(--font-hud);font-size:12px;font-weight:600;color:var(--text-cyan);display:block;margin-bottom:4px">ปีการศึกษา:</label>
+          <select id="teacher-year-select" class="form-control" style="min-height:38px;padding:4px 12px;width:160px;font-family:var(--font-hud)">
+            <option value="yr_2569" selected>ปีการศึกษา 2569</option>
+            <option value="yr_2570">ปีการศึกษา 2570</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:var(--font-hud);font-size:12px;font-weight:600;color:var(--text-cyan);display:block;margin-bottom:4px">ระดับชั้น:</label>
+          <select id="teacher-grade-select" class="form-control" style="min-height:38px;padding:4px 12px;width:160px;font-family:var(--font-hud)">
+            <option value="M4" selected>มัธยมศึกษาปีที่ 4</option>
+            <option value="M5">มัธยมศึกษาปีที่ 5</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:var(--font-hud);font-size:12px;font-weight:600;color:var(--text-cyan);display:block;margin-bottom:4px">ห้องเรียน:</label>
+          <select id="teacher-room-select" class="form-control" style="min-height:38px;padding:4px 12px;width:140px;font-family:var(--font-hud)">
+            <option value="1" selected>ห้อง 1</option>
+            <option value="2">ห้อง 2</option>
+            <option value="all">ทุกห้องเรียน</option>
+          </select>
+        </div>
+        <div style="margin-left:auto;font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+          <i data-lucide="info" style="color:var(--cyan-neon)"></i> คลิกที่ปุ่มสถานะใบงานของนักเรียนเพื่อเปิดหน้าต่างตรวจงานและให้คะแนน
+        </div>
+      </div>
+
+      <!-- Gradebook Matrix Container -->
+      <div id="teacher-matrix-wrapper"></div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: UPLOAD EVIDENCE (STUDENT MOBILE-FIRST EASY UPLOAD) -->
+  <div id="modal-upload" class="modal-overlay" style="display:none">
+    <div class="modal-content modal-upload-content">
+      <div class="modal-header">
+        <div>
+          <h3 id="modal-upload-title" class="modal-title" style="display:flex;align-items:center;gap:8px">
+            <i data-lucide="file-up" style="color:var(--cyan-neon)"></i> ส่งใบงานปฏิบัติการ
+          </h3>
+          <div id="modal-upload-subtitle" style="font-size:12px;color:var(--text-muted);margin-top:2px"></div>
+        </div>
+        <button class="modal-close" onclick="window.app.closeUploadModal()"><i data-lucide="x"></i></button>
+      </div>
+
+      <!-- Real-world Clear Guideline Box -->
+      <div class="upload-guideline-box">
+        <div style="font-weight:700;color:var(--text-cyan);margin-bottom:4px;display:flex;align-items:center;gap:6px">
+          <i data-lucide="info" style="width:16px;height:16px"></i> คำแนะนำในการส่งงาน:
+        </div>
+        <div>• ถ่ายภาพใบงานให้ชัดเจนและเห็นเนื้อหาครบถ้วน (ระบบจะย่อขนาดให้อยู่ในขนาด A4 และบีบอัดภาพให้อัตโนมัติบนมือถือ ไม่เปลืองเน็ตและส่งงานได้อย่างรวดเร็ว)</div>
+        <div>• ส่งได้สูงสุด 5 หน้า และสามารถส่งซ้ำเพื่ออัปเดตงานได้ตลอดเวลา โดยระบบจะบันทึกเป็นประวัติเวอร์ชันล่าสุดให้อัตโนมัติ</div>
+      </div>
+
+      <!-- Dual Large Action Buttons for Mobile -->
+      <div class="upload-action-buttons">
+        <button type="button" id="btn-trigger-camera" class="btn btn-primary upload-trigger-btn">
+          <i data-lucide="camera" style="width:22px;height:22px"></i>
+          <span>ถ่ายภาพด้วยกล้อง</span>
+        </button>
+        <button type="button" id="btn-trigger-gallery" class="btn btn-secondary upload-trigger-btn">
+          <i data-lucide="image" style="width:22px;height:22px"></i>
+          <span>เลือกรูปจากแกลเลอรี</span>
+        </button>
+      </div>
+
+      <!-- Hidden Native File Inputs -->
+      <input type="file" id="upload-camera-input" accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="upload-file-input" accept="image/jpeg,image/png,image/webp,image/*" multiple style="display:none">
+
+      <!-- Upload Compression State / Previews -->
+      <div id="upload-compression-status" style="display:none" class="compression-status-pill">
+        <span class="spinner-dot"></span> กำลังประมวลผลและบีบอัดภาพระดับ A4 บนอุปกรณ์ของคุณ...
+      </div>
+
+      <!-- Preview Grid -->
+      <div id="upload-previews-container" class="preview-grid"></div>
+
+      <div class="form-group" style="margin-top:14px">
+        <label class="form-label" for="upload-note">บันทึกเพิ่มเติมถึงครูผู้สอน (ถ้ามี)</label>
+        <textarea id="upload-note" class="form-control" rows="2" placeholder="เช่น ส่งครบทั้ง 2 หน้าครับ / แก้ไขข้อที่ 3 แล้วครับ"></textarea>
+      </div>
+
+      <!-- Multi-step Visual Progress Bar Container -->
+      <div id="upload-progress-box" class="upload-progress-container" style="display:none">
+        <div class="upload-progress-header">
+          <span id="upload-progress-text" class="upload-progress-label">กำลังเตรียมการส่งงาน...</span>
+          <span id="upload-progress-percent" class="upload-progress-pct">0%</span>
+        </div>
+        <div class="upload-progress-track">
+          <div id="upload-progress-bar-fill" class="upload-progress-fill" style="width:0%"></div>
+        </div>
+        <div class="upload-steps-indicator">
+          <span id="step-badge-1" class="step-badge active"><i data-lucide="file-check"></i> ปรับขนาด A4</span>
+          <span id="step-badge-2" class="step-badge"><i data-lucide="upload-cloud"></i> อัปโหลดไฟล์</span>
+          <span id="step-badge-3" class="step-badge"><i data-lucide="check-circle-2"></i> บันทึกผลสำเร็จ</span>
+        </div>
+      </div>
+
+      <div class="modal-footer-actions">
+        <button class="btn btn-secondary" onclick="window.app.closeUploadModal()">ยกเลิก</button>
+        <button id="btn-submit-upload" class="btn btn-primary" onclick="window.app.submitUpload()">
+          <i data-lucide="upload-cloud"></i> ยืนยันการส่งใบงาน (<span id="upload-count-label">0 หน้า</span>)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: TEACHER GRADING DIALOG -->
+  <div id="modal-grading" class="modal-overlay" style="display:none">
+    <div class="modal-content" style="max-width:620px">
+      <div class="modal-header">
+        <h3 id="modal-grading-title" class="modal-title" style="display:flex;align-items:center;gap:8px">
+          <i data-lucide="clipboard-check" style="color:var(--cyan-neon)"></i> ตรวจและให้คะแนนใบงาน
+        </h3>
+        <button class="modal-close" onclick="window.app.closeGradingModal()"><i data-lucide="x"></i></button>
+      </div>
+
+      <!-- SUBMISSION & VERSION HISTORY SECTION -->
+      <div id="grading-history-section" style="margin-bottom:18px;padding:12px 14px;background:rgba(2,132,199,0.08);border:1px solid rgba(56,189,248,0.3);border-radius:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-family:var(--font-hud);font-size:12px;font-weight:700;color:var(--text-cyan);display:flex;align-items:center;gap:6px">
+            <i data-lucide="history" style="width:14px;height:14px"></i> ผลงานที่นักเรียนส่ง (SUBMISSION VERSIONS)
+          </span>
+          <div id="grading-version-selector-container" style="display:flex;align-items:center;gap:6px">
+            <label style="font-size:12px;color:var(--text-dim)">เวอร์ชัน:</label>
+            <select id="grading-version-select" class="form-control" style="width:auto;min-height:28px;padding:2px 8px;font-size:12px;font-family:var(--font-mono);font-weight:700">
+              <option value="latest">v1 (ล่าสุด)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="grading-version-details">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;gap:4px" id="grading-version-timestamp">
+            <i data-lucide="calendar" style="width:14px;height:14px"></i> ส่งเมื่อ: -
+          </div>
+          <div style="font-size:12px;color:#e2e8f0;margin-bottom:10px;background:rgba(15,23,42,0.6);padding:8px 12px;border-radius:6px;border:1px solid rgba(148,163,184,0.15)" id="grading-version-note">
+            <i data-lucide="message-square" style="width:14px;height:14px;vertical-align:middle;margin-right:4px"></i> บันทึกจากนักเรียน: -
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-cyan);margin-bottom:6px;display:flex;align-items:center;gap:6px">
+            <i data-lucide="image" style="width:14px;height:14px"></i> รูปภาพผลงาน (คลิกเพื่อดูภาพขยาย):
+          </div>
+          <div id="grading-version-files" style="display:flex;flex-wrap:wrap;gap:8px">
+            <span style="font-size:12px;color:var(--text-dim)">ไม่มีไฟล์แนบ</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">รหัสภารกิจที่ประเมิน (TASK CODE)</label>
+        <input type="text" id="grading-task-code" class="form-control" readonly style="font-family:var(--font-mono)">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="grading-points">คะแนนที่ให้ (คะแนนเต็ม 10.0)</label>
+        <input type="number" id="grading-points" class="form-control" step="0.1" min="0" max="15" placeholder="เช่น 9.5" style="font-family:var(--font-mono);font-size:16px;font-weight:700">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="grading-feedback">คำแนะนำและข้อเสนอแนะจากครูผู้สอน</label>
+        <textarea id="grading-feedback" class="form-control" rows="2" placeholder="ระบุข้อแนะนำที่เป็นประโยชน์ต่อนักเรียน"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="grading-reason">เหตุผลในการแก้ไขคะแนน (กรณีแก้ไขคะแนนที่เผยแพร่แล้ว)</label>
+        <input type="text" id="grading-reason" class="form-control" placeholder="จำเป็นเฉพาะกรณีแก้ไขคะแนนที่เผยแพร่แล้ว">
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid var(--border-glass)">
+        <button class="btn btn-danger btn-sm" onclick="window.app.submitRequestRevision()">ส่งกลับให้แก้ไข</button>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-secondary btn-sm" onclick="window.app.closeGradingModal()">ปิด</button>
+          <button class="btn btn-primary btn-sm" onclick="window.app.submitPublishGrade()">บันทึกและเผยแพร่คะแนน</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: IMPORT ROSTER / NEW YEAR (TEACHER) -->
+  <div id="modal-import-roster" class="modal-overlay" style="display:none">
+    <div class="modal-content" style="max-width:620px">
+      <div class="modal-header">
+        <h3 class="modal-title" style="display:flex;align-items:center;gap:8px">
+          <i data-lucide="user-plus" style="color:var(--cyan-neon)"></i> เปิดปีการศึกษาใหม่ / นำเข้าข้อมูลนักเรียน
+        </h3>
+        <button class="modal-close" onclick="document.getElementById('modal-import-roster').style.display='none'"><i data-lucide="x"></i></button>
+      </div>
+
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5">
+        ระบบจะเชื่อมโยงรหัสนักเรียน 5 หลักเดิมโดยอัตโนมัติ (เช่น นร. ม.4 ปี 2569 ที่เลื่อนชั้นขึ้น ม.5 ปี 2570 จะใช้รหัสเดิมและมีประวัติย้อนหลัง)
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="import-year-be">ระบุปีการศึกษา (พ.ศ.)</label>
+        <input type="number" id="import-year-be" class="form-control" value="2570" min="2500" max="2700" required style="font-family:var(--font-mono);font-size:16px;font-weight:700">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">เลือกไฟล์ CSV ข้อมูลนักเรียน</label>
+        <input type="file" id="import-csv-file" accept=".csv,text/csv" class="form-control" style="padding:8px">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">คอลัมน์ที่รองรับ: code_5_digit, display_name, grade, room, roll_no (หรือดาวน์โหลดเทมเพลตมากรอก)</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="import-csv-text">หรือ วางข้อมูล CSV (คัดลอกจาก Excel มาวางได้เลย)</label>
+        <textarea id="import-csv-text" class="form-control" rows="5" placeholder="code_5_digit,display_name,grade,room,roll_no&#10;17763,นายพิพัฒน์ จุลบุตร,M5,1,1&#10;17808,นายอโณทัย จรัญไชยกุล,M5,1,2" style="font-family:var(--font-mono);font-size:12px"></textarea>
+      </div>
+
+      <div id="import-status-box" style="display:none;padding:12px;border-radius:var(--radius-md);margin-bottom:14px;font-size:13px"></div>
+
+      <div style="display:flex;justify-content:flex-end;gap:12px">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-import-roster').style.display='none'">ยกเลิก</button>
+        <button id="btn-submit-import" class="btn btn-primary" onclick="window.app.submitImportRoster()"><i data-lucide="check"></i> ยืนยันการนำเข้าข้อมูล</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: STUDENT SUBMISSION HISTORY -->
+  <div id="modal-student-history" class="modal-overlay" style="display:none">
+    <div class="modal-content" style="max-width:620px">
+      <div class="modal-header">
+        <h3 id="modal-history-title" class="modal-title" style="display:flex;align-items:center;gap:8px">
+          <i data-lucide="history" style="color:var(--cyan-neon)"></i> ประวัติการส่งงาน
+        </h3>
+        <button class="modal-close" onclick="window.app.closeHistoryModal()"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="upload-guideline-box" style="margin-bottom:16px">
+        <div style="font-weight:700;color:var(--text-cyan);margin-bottom:4px;display:flex;align-items:center;gap:6px">
+          <i data-lucide="info" style="width:16px;height:16px"></i> ข้อมูลประวัติการส่งงาน:
+        </div>
+        <div>ระบบบันทึกประวัติการส่งงานทุกเวอร์ชัน สามารถตรวจสอบวันเวลาที่ส่ง บันทึกข้อความ และเปิดดูภาพผลงานย้อนหลังได้ทุกครั้งที่ส่ง</div>
+      </div>
+
+      <div id="student-history-timeline" style="display:flex;flex-direction:column;gap:14px;max-height:450px;overflow-y:auto;padding-right:6px">
+        <!-- Version timeline cards -->
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:18px">
+        <button class="btn btn-secondary" onclick="window.app.closeHistoryModal()">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: IMAGE LIGHTBOX / PREVIEW -->
+  <div id="modal-image-preview" class="modal-overlay" style="display:none;z-index:9999">
+    <div class="modal-content modal-lightbox-content">
+      <div style="width:100%;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span id="preview-image-title" style="font-family:var(--font-hud);font-size:13px;color:var(--text-cyan);display:flex;align-items:center;gap:6px">
+          <i data-lucide="zoom-in" style="width:15px;height:15px"></i> รูปภาพผลงาน
+        </span>
+        <button class="modal-close" onclick="document.getElementById('modal-image-preview').style.display='none'"><i data-lucide="x"></i></button>
+      </div>
+      <div style="flex:1;display:flex;justify-content:center;align-items:center;overflow:hidden">
+        <img id="preview-image-el" src="" alt="Worksheet Preview" style="max-width:100%;max-height:78vh;border-radius:6px;object-fit:contain;box-shadow:0 10px 25px rgba(0,0,0,0.5)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/lucide.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/mock-backend.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+`;
+
+fs.writeFileSync(path.join(__dirname, '..', 'index.html'), indexHtml, 'utf8');
+console.log('Successfully generated index.html with Lucide Icons, Top Progress Bar and new Logo!');

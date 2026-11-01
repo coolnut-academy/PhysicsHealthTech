@@ -80,13 +80,13 @@ function seedSampleData() {
   const tchSheet = ss.getSheetByName("Teachers");
   if (tchSheet) {
     const existing = tchSheet.getDataRange().getValues();
-    const hasTch1 = existing.some(r => r[6] === "TeacherAuthSecret#1001");
+    const hasTch1 = existing.some(r => r[6] === "coolnut1618");
     if (!hasTch1) {
-      tchSheet.appendRow(["tch_001", "", "teacher.physics@school.ac.th", "อาจารย์ ดร.สมศักดิ์ รักวิทยา", "teacher", "active", "TeacherAuthSecret#1001", new Date().toISOString()]);
+      tchSheet.appendRow(["tch_001", "", "teacher.physics@school.ac.th", "อาจารย์ ดร.สมศักดิ์ รักวิทยา", "teacher", "active", "coolnut1618", new Date().toISOString()]);
     }
-    const hasAdmin = existing.some(r => r[6] === "AdminAuthSecret#9999");
+    const hasAdmin = existing.some(r => r[6] === "coolnut1618");
     if (!hasAdmin) {
-      tchSheet.appendRow(["tch_admin", "", "admin.physics@school.ac.th", "อาจารย์ นพพร หัวหน้าหมวด", "admin", "active", "AdminAuthSecret#9999", new Date().toISOString()]);
+      tchSheet.appendRow(["tch_admin", "", "admin.physics@school.ac.th", "อาจารย์ นพพร หัวหน้าหมวด", "admin", "active", "coolnut1618", new Date().toISOString()]);
     }
   }
 
@@ -269,11 +269,11 @@ function importOfficialRoster2569() {
   const tchSheet = ss.getSheetByName("Teachers");
   if (tchSheet) {
     const existing = tchSheet.getDataRange().getValues();
-    if (!existing.some(r => r[6] === "TeacherAuthSecret#1001")) {
-      tchSheet.appendRow(["tch_001", "", "teacher.physics@school.ac.th", "อาจารย์ ดร.สมศักดิ์ รักวิทยา", "teacher", "active", "TeacherAuthSecret#1001", new Date().toISOString()]);
+    if (!existing.some(r => r[6] === "coolnut1618")) {
+      tchSheet.appendRow(["tch_001", "", "teacher.physics@school.ac.th", "อาจารย์ ดร.สมศักดิ์ รักวิทยา", "teacher", "active", "coolnut1618", new Date().toISOString()]);
     }
-    if (!existing.some(r => r[6] === "AdminAuthSecret#9999")) {
-      tchSheet.appendRow(["tch_admin", "", "admin.physics@school.ac.th", "อาจารย์ นพพร หัวหน้าหมวด", "admin", "active", "AdminAuthSecret#9999", new Date().toISOString()]);
+    if (!existing.some(r => r[6] === "coolnut1618")) {
+      tchSheet.appendRow(["tch_admin", "", "admin.physics@school.ac.th", "อาจารย์ นพพร หัวหน้าหมวด", "admin", "active", "coolnut1618", new Date().toISOString()]);
     }
   }
 
@@ -1301,6 +1301,11 @@ function api(request, injectedRepo = null) {
     // 7. Submissions & Upload Lifecycle
     if (action === "submissions.begin") {
       const res = SubmissionService.beginUpload(session, payload, repo);
+      return { ...res, request_id: requestId };
+    }
+
+    if (action === "submissions.submitBatch") {
+      const res = SubmissionService.submitBatch(session, payload, repo);
       return { ...res, request_id: requestId };
     }
 

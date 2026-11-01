@@ -42,10 +42,17 @@ class SheetRepository {
     this.memoryStore.set(tableName, [...items]);
   }
 
+  getGasSpreadsheet_() {
+    if (!this._cachedSs && this.isGasRuntime && this.spreadsheetId) {
+      this._cachedSs = SpreadsheetApp.openById(this.spreadsheetId);
+    }
+    return this._cachedSs;
+  }
+
   loadFromGasSheet_(tableName) {
     if (!this.isGasRuntime || !this.spreadsheetId) return [];
     try {
-      const ss = SpreadsheetApp.openById(this.spreadsheetId);
+      const ss = this.getGasSpreadsheet_();
       const sheet = ss.getSheetByName(tableName);
       if (!sheet) return [];
       const data = sheet.getDataRange().getValues();
@@ -77,7 +84,7 @@ class SheetRepository {
   appendGasRow_(tableName, rowObj) {
     if (!this.isGasRuntime || !this.spreadsheetId) return;
     try {
-      const ss = SpreadsheetApp.openById(this.spreadsheetId);
+      const ss = this.getGasSpreadsheet_();
       const sheet = ss.getSheetByName(tableName);
       if (!sheet) return;
       const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
@@ -96,7 +103,7 @@ class SheetRepository {
   updateGasRow_(tableName, rowObj, rowNumber = null) {
     if (!this.isGasRuntime || !this.spreadsheetId) return;
     try {
-      const ss = SpreadsheetApp.openById(this.spreadsheetId);
+      const ss = this.getGasSpreadsheet_();
       const sheet = ss.getSheetByName(tableName);
       if (!sheet) return;
       const targetRow = rowNumber || rowObj._rowNumber;
@@ -119,7 +126,7 @@ class SheetRepository {
   deleteGasRow_(tableName, rowNumber) {
     if (!this.isGasRuntime || !this.spreadsheetId || !rowNumber) return;
     try {
-      const ss = SpreadsheetApp.openById(this.spreadsheetId);
+      const ss = this.getGasSpreadsheet_();
       const sheet = ss.getSheetByName(tableName);
       if (!sheet) return;
       sheet.deleteRow(rowNumber);
@@ -515,6 +522,7 @@ class SheetRepository {
         return file.getId();
       } catch (err) {
         if (typeof Logger !== "undefined") Logger.log("Drive upload error: " + err.message);
+        throw new Error("DRIVE_UPLOAD_FAILED: ไม่สามารถบันทึกไฟล์ภาพลงใน Google Drive ได้ (" + err.message + ")");
       }
     }
     if (!this.fileStorage) this.fileStorage = new Map();
@@ -531,6 +539,7 @@ class SheetRepository {
         return Utilities.base64Encode(bytes);
       } catch (err) {
         if (typeof Logger !== "undefined") Logger.log("Drive read error: " + err.message);
+        throw new Error("DRIVE_READ_FAILED: ไม่สามารถเปิดไฟล์ภาพจาก Google Drive ได้ (" + err.message + ")");
       }
     }
     if (!this.fileStorage) this.fileStorage = new Map();

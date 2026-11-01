@@ -79,7 +79,7 @@ function runAuthSecurityTests() {
   {
     console.log("  - Test SEC03: Teacher login verification requires valid teacher credential");
     // Valid teacher login
-    const validTeacher = AuthService.teacherLogin({ auth_secret: "TeacherAuthSecret#1001" }, repo);
+    const validTeacher = AuthService.teacherLogin({ auth_secret: "coolnut1618" }, repo);
     assert.strictEqual(validTeacher.ok, true);
     assert.strictEqual(validTeacher.data.profile.role, "teacher");
 

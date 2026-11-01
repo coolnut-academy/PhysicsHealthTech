@@ -102,7 +102,7 @@ function runRevisionImmutabilityTests() {
 
   // 6. Teacher checks Student's History
   const tchLogin = MockBackend.handleApi('auth.teacherLogin', {
-    auth_secret: 'TeacherAuthSecret#1001'
+    auth_secret: 'coolnut1618'
   });
   const histTeacher = MockBackend.handleApi('submissions.history', {
     student_uid: 'std_99999',

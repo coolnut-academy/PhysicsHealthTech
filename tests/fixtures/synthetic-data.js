@@ -71,16 +71,7 @@ const SYNTHETIC_TEACHERS = [
     name: "อาจารย์ ดร.สมศักดิ์ นวัตกรรม",
     role: "teacher",
     status: "active",
-    auth_secret: "TeacherAuthSecret#1001"
-  },
-  {
-    teacher_uid: "tch_admin",
-    google_sub: "google_sub_admin",
-    email_for_display: "admin.physics@school.ac.th",
-    name: "อาจารย์ นพพร หัวหน้าหมวด",
-    role: "admin",
-    status: "active",
-    auth_secret: "AdminAuthSecret#9999"
+    auth_secret: "coolnut1618"
   }
 ];
 

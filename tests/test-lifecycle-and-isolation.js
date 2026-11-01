@@ -59,7 +59,7 @@ function runLifecycleAndIsolationTests() {
 
   // 4. Teacher Promotion & Academic Year 2570 Creation
   const tchLogin = MockBackend.handleApi('auth.teacherLogin', {
-    auth_secret: 'TeacherAuthSecret#1001'
+    auth_secret: 'coolnut1618'
   });
   if (!tchLogin.ok) throw new Error('Teacher login failed');
 
