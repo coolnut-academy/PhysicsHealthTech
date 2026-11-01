@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PhysicsHealthTech V2.0 — Bio-Physics & Health Technology Academic Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Sarabun:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Background Interactive Physics & Biometric Canvas -->
+  <canvas id="physics-bg-canvas"></canvas>
+
+  <!-- Top App Header (Cyber-Clinical HUD) -->
+  <header class="app-header">
+    <div class="brand-area">
+      <div class="brand-logo-container">
+        <div class="brand-logo">Φ</div>
+      </div>
+      <div>
+        <div class="brand-title">
+          PHYSICS HEALTH TECH
+          <span class="brand-badge">V2.0 HUD</span>
+          <span class="ecg-indicator">
+            <span class="ecg-dot"></span>
+            BIO-TELEMETRY ONLINE
+          </span>
+        </div>
+        <div class="brand-subtitle">ระบบติดตามหลักฐานการเรียนรู้และประเมินผลฟิสิกส์สุขภาพเทคโนโลยี</div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- User Profile HUD Tag -->
+      <div id="user-header-info" class="user-badge" style="display:none">
+        <span id="user-display-name">สมชาย มั่นใจ</span>
+        <span id="user-role-tag" class="role-tag">STUDENT</span>
+        <button id="btn-logout" class="btn btn-secondary btn-sm" style="margin-left:8px" title="ออกจากระบบ">LOGOUT</button>
+      </div>
+
+      <!-- Settings Button -->
+      <button id="btn-settings" class="btn btn-secondary btn-sm" title="ตั้งค่าการเชื่อมต่อ">⚙️ SETTINGS</button>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+
+    <!-- 1. AUTHENTICATION VIEW (BIO-SCANNER HUD) -->
+    <section id="view-auth" style="display:block;max-width:480px;margin:50px auto">
+      <div class="card" style="padding:32px">
+        <div style="text-align:center;margin-bottom:28px">
+          <div style="width:56px;height:56px;background:linear-gradient(135deg, #00f0ff, #6366f1);color:#060913;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:26px;font-family:var(--font-hud);font-weight:800;margin-bottom:14px;box-shadow:0 0 20px var(--cyan-glow)">
+            Φ
+          </div>
+          <h2 style="font-family:var(--font-hud);font-size:22px;font-weight:700;letter-spacing:0.5px">AUTHENTICATION GATEWAY</h2>
+          <p style="font-size:13px;color:var(--text-muted);margin-top:6px">ยืนยันตัวตนเข้าสู่ระบบปฏิบัติการฟิสิกส์สุขภาพ PhysicsHealthTech</p>
+        </div>
+
+        <!-- Role Toggle Buttons -->
+        <div style="display:flex;gap:10px;margin-bottom:24px">
+          <button id="btn-tab-student-login" class="btn btn-primary" style="flex:1">นักเรียน (STUDENT)</button>
+          <button id="btn-tab-teacher-login" class="btn btn-secondary" style="flex:1">ครูผู้สอน (TEACHER)</button>
+        </div>
+
+        <!-- Error Alert Box -->
+        <div id="auth-error-box" style="display:none;background:rgba(244,63,94,0.15);color:#fb7185;border:1px solid rgba(244,63,94,0.4);padding:12px 16px;border-radius:var(--radius-md);font-size:13px;margin-bottom:18px"></div>
+
+        <!-- Student Login Form -->
+        <form id="form-student-login">
+          <div class="form-group">
+            <label class="form-label" for="student-code">รหัสนักเรียน 5 หลัก (STUDENT ID CODE)</label>
+            <input type="text" id="student-code" class="form-control" placeholder="ป้อนรหัส 5 หลัก (เช่น 00007)" maxlength="5" required style="font-family:var(--font-mono)">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="student-secret">รหัสผ่านยืนยันตัวตน (INDEPENDENT PASSCODE)</label>
+            <input type="password" id="student-secret" class="form-control" placeholder="ป้อนรหัสผ่านที่ได้รับจากครู" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px">เข้าสู่ระบบนักเรียน (STUDENT SIGN IN)</button>
+
+          <!-- Demo Quick Fill Buttons -->
+          <div style="margin-top:24px;padding-top:18px;border-top:1px dashed var(--border-glass)">
+            <div style="font-family:var(--font-hud);font-size:12px;font-weight:700;color:var(--text-cyan);margin-bottom:10px;letter-spacing:0.5px">
+              ⚡ QUICK BIO-CREDENTIALS (ทดสอบระบบด่วน):
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('student-code').value='00007';document.getElementById('student-secret').value='PhtSecret#00007A'">นักเรียน 00007 (ม.4)</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('student-code').value='00123';document.getElementById('student-secret').value='PhtSecret#00123B'">นักเรียน 00123 (ม.4)</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('student-code').value='91234';document.getElementById('student-secret').value='PhtSecret#91234D'">นักเรียน 91234 (ม.5)</button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Teacher Login Form -->
+        <form id="form-teacher-login" style="display:none">
+          <div class="form-group">
+            <label class="form-label" for="teacher-secret">รหัสผ่านครูผู้สอน (TEACHER AUTH SECRET)</label>
+            <input type="password" id="teacher-secret" class="form-control" placeholder="ป้อนรหัสยืนยันตัวตนครูผู้สอน" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px">เข้าสู่ระบบครูผู้สอน (TEACHER SIGN IN)</button>
+
+          <!-- Demo Quick Fill -->
+          <div style="margin-top:24px;padding-top:18px;border-top:1px dashed var(--border-glass)">
+            <div style="font-family:var(--font-hud);font-size:12px;font-weight:700;color:var(--text-cyan);margin-bottom:10px;letter-spacing:0.5px">
+              ⚡ TEACHER DEMO CREDENTIALS:
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('teacher-secret').value='TeacherAuthSecret#1001'">อ.สมศักดิ์ (ครูประจำวิชา)</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('teacher-secret').value='AdminAuthSecret#9999'">อ.นพพร (หัวหน้าหมวด Admin)</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- 2. STUDENT PORTAL VIEW (BIOMETRIC HUD DASHBOARD) -->
+    <section id="view-student-portal" style="display:none">
+      <!-- Profile & Telemetry Banner -->
+      <div id="student-profile-banner"></div>
+
+      <!-- Grade Switcher Toggle -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:14px">
+        <div style="display:flex;gap:10px">
+          <button id="btn-grade-m4" class="btn btn-primary btn-sm">มัธยมศึกษาปีที่ 4 (9 ใบงาน)</button>
+          <button id="btn-grade-m5" class="btn btn-secondary btn-sm">มัธยมศึกษาปีที่ 5 (9 ใบงาน)</button>
+        </div>
+        <div style="font-family:var(--font-hud);font-size:13px;color:var(--text-cyan);display:flex;align-items:center;gap:6px">
+          <span>⚡ SYLLABUS: 20 SESSIONS (100 MIN EACH)</span>
+          <span style="color:var(--text-muted)">|</span>
+          <span>100 TOTAL POINTS</span>
+        </div>
+      </div>
+
+      <!-- 4 High-Tech Metric HUD Cards -->
+      <div class="score-summary-grid">
+        <div class="metric-card">
+          <div class="metric-label">
+            <span>🔬 REVIEWED TASK POINTS</span>
+          </div>
+          <div class="metric-value">
+            <span id="metric-earned-score" style="color:var(--cyan-neon)">0.0 / 0.0</span>
+          </div>
+          <div class="metric-note">คะแนนจากงานที่ครูตรวจและเผยแพร่แล้ว</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            <span>📊 ACCUMULATED SCORE / 100</span>
+          </div>
+          <div class="metric-value">
+            <span id="metric-accumulated-score" style="color:var(--emerald-bio)">0.0 / 100</span>
+          </div>
+          <div class="metric-note">คะแนนสะสมที่ตรวจแล้ว (ยังไม่ใช่ผลสุดท้าย)</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            <span>⏳ PENDING REVIEW TASKS</span>
+          </div>
+          <div class="metric-value">
+            <span id="metric-pending-tasks" style="color:var(--amber-warn)">0 งาน</span>
+          </div>
+          <div class="metric-note">รอครูผู้สอนประเมินและเผยแพร่ผล</div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-label">
+            <span>🎨 COLORING BONUS POINTS</span>
+          </div>
+          <div class="metric-value">
+            <span id="metric-bonus-score" style="color:var(--violet-quantum)">+0.0</span>
+          </div>
+          <div class="metric-note">โบนัสความตั้งใจตกแต่ง (คะแนนรวมไม่เกิน 100)</div>
+        </div>
+      </div>
+
+      <!-- Submission Progress Bar HUD -->
+      <div class="card" style="padding:16px 24px;margin-bottom:28px">
+        <div style="display:flex;justify-content:space-between;font-family:var(--font-hud);font-size:13px;font-weight:600;margin-bottom:10px">
+          <span id="progress-text" style="color:var(--text-cyan)">ความคืบหน้าการส่งใบงานปฏิบัติการ</span>
+          <span style="color:var(--text-muted)">TARGET: 9 PROTOCOLS</span>
+        </div>
+        <div style="width:100%;height:10px;background:rgba(15,23,42,0.8);border:1px solid var(--border-glass);border-radius:var(--radius-full);overflow:hidden">
+          <div id="progress-bar-fill" style="width:0%;height:100%;background:linear-gradient(90deg, #00f0ff, #6366f1);border-radius:var(--radius-full);box-shadow:0 0 10px var(--cyan-glow);transition:width 0.4s ease"></div>
+        </div>
+      </div>
+
+      <!-- 9 Worksheets Grid -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <h3 style="font-family:var(--font-hud);font-size:19px;font-weight:700;letter-spacing:0.5px">
+          🧪 แฟ้มใบงานปฏิบัติการฟิสิกส์สุขภาพ (LABORATORY PROTOCOLS 1-9)
+        </h3>
+      </div>
+      <div id="student-worksheets-container" class="worksheet-grid"></div>
+    </section>
+
+    <!-- 3. TEACHER WORKSPACE VIEW (MISSION CONTROL / LAB OVERSIGHT) -->
+    <section id="view-teacher-workspace" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:14px">
+        <div>
+          <h2 style="font-family:var(--font-hud);font-size:24px;font-weight:700;letter-spacing:0.5px;color:#fff">
+            TEACHER OVERSIGHT & GRADEBOOK CONSOLE
+          </h2>
+          <div style="font-size:13px;color:var(--text-muted)">ตรวจหลักฐาน ให้คะแนนราย Task/Rubric รายบุคคลและกลุ่ม เรียงลำดับเลขที่</div>
+        </div>
+        <div style="display:flex;gap:12px">
+          <button id="btn-export-gradebook" class="btn btn-secondary btn-sm">📊 EXPORT GRADEBOOK (CSV)</button>
+        </div>
+      </div>
+
+      <!-- Filters Bar -->
+      <div class="card" style="padding:16px 24px;margin-bottom:24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+        <div>
+          <label style="font-family:var(--font-hud);font-size:12px;font-weight:600;color:var(--text-cyan)">ระดับชั้น (GRADE LEVEL):</label>
+          <select id="teacher-grade-select" class="form-control" style="min-height:38px;padding:4px 12px;width:160px;font-family:var(--font-hud)">
+            <option value="M4" selected>มัธยมศึกษาปีที่ 4</option>
+            <option value="M5">มัธยมศึกษาปีที่ 5</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-family:var(--font-hud);font-size:12px;font-weight:600;color:var(--text-cyan)">ห้องเรียน (CLASSROOM):</label>
+          <select id="teacher-room-select" class="form-control" style="min-height:38px;padding:4px 12px;width:140px;font-family:var(--font-hud)">
+            <option value="1" selected>ห้อง 1</option>
+            <option value="2">ห้อง 2</option>
+            <option value="all">ทุกห้องเรียน</option>
+          </select>
+        </div>
+        <div style="margin-left:auto;font-size:13px;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+          <span style="color:var(--cyan-neon)">💡</span> คลิกที่ปุ่มสถานะใบงานของนักเรียนเพื่อเปิดหน้าต่างตรวจงานและให้คะแนน
+        </div>
+      </div>
+
+      <!-- Gradebook Matrix Container -->
+      <div id="teacher-matrix-wrapper"></div>
+    </section>
+
+  </main>
+
+  <!-- Mobile Bottom Navigation (Cyber HUD) -->
+  <nav id="mobile-navigation" class="mobile-nav" style="display:none">
+    <ul class="mobile-nav-items">
+      <li>
+        <button class="mobile-nav-btn active" data-tab="dashboard">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+          หน้าหลัก
+        </button>
+      </li>
+      <li>
+        <button class="mobile-nav-btn" data-tab="worksheets">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          งานของฉัน
+        </button>
+      </li>
+      <li>
+        <button class="mobile-nav-btn" data-tab="account">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+          บัญชี
+        </button>
+      </li>
+    </ul>
+  </nav>
+
+  <!-- MODAL: UPLOAD EVIDENCE (STUDENT) -->
+  <div id="modal-upload" class="modal-overlay" style="display:none">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-upload-title" class="modal-title">ส่งใบงานปฏิบัติการ</h3>
+        <button class="modal-close" onclick="window.app.closeUploadModal()">✕</button>
+      </div>
+
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:18px">
+        ถ่ายภาพใบงานกระดาษที่ครูตรวจแล้วทุกหน้าอย่างชัดเจน (สูงสุด 5 ภาพ, ไฟล์จะถูกบีบอัดระดับความคมชัดสูงอัตโนมัติ)
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">เลือกหรือถ่ายภาพหลักฐานใบงาน</label>
+        <input type="file" id="upload-file-input" accept="image/jpeg,image/png,image/webp" multiple class="form-control" style="padding:8px">
+      </div>
+
+      <!-- Preview Grid -->
+      <div id="upload-previews-container" class="preview-grid"></div>
+
+      <div class="form-group">
+        <label class="form-label" for="upload-note">บันทึกเพิ่มเติมถึงครูผู้สอน</label>
+        <textarea id="upload-note" class="form-control" rows="2" placeholder="เช่น ส่งใบงานการทดลองครบทุกหน้าครับ"></textarea>
+      </div>
+
+      <div id="upload-progress-box" style="display:none;background:rgba(2,132,199,0.15);border:1px solid rgba(56,189,248,0.4);padding:12px 16px;border-radius:var(--radius-md);margin-bottom:16px;font-size:13px;font-family:var(--font-hud);color:var(--cyan-neon)">
+        <span id="upload-progress-text">กำลังประมวลผล...</span>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:12px">
+        <button class="btn btn-secondary" onclick="window.app.closeUploadModal()">ยกเลิก</button>
+        <button id="btn-submit-upload" class="btn btn-primary" onclick="window.app.submitUpload()">ยืนยันการส่งงาน (SUBMIT)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: TEACHER GRADING DIALOG -->
+  <div id="modal-grading" class="modal-overlay" style="display:none">
+    <div class="modal-content" style="max-width:540px">
+      <div class="modal-header">
+        <h3 id="modal-grading-title" class="modal-title">ตรวจและประเมินผลคะแนน</h3>
+        <button class="modal-close" onclick="window.app.closeGradingModal()">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">รหัสงานประเมินตามหลักสูตร (TASK CODE)</label>
+        <input type="text" id="grading-task-code" class="form-control" readonly style="font-family:var(--font-mono)">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="grading-points">คะแนนที่ให้ (คะแนนเต็ม 10.0)</label>
+        <input type="number" id="grading-points" class="form-control" step="0.1" min="0" max="15" placeholder="เช่น 9.5" style="font-family:var(--font-mono);font-size:16px;font-weight:700">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="grading-feedback">คำแนะนำและข้อเสนอแนะ (FEEDBACK)</label>
+        <textarea id="grading-feedback" class="form-control" rows="2" placeholder="ระบุข้อแนะนำที่เป็นประโยชน์ต่อนักเรียน"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="grading-reason">เหตุผลในการแก้ไขคะแนน (REGRADE REASON)</label>
+        <input type="text" id="grading-reason" class="form-control" placeholder="จำเป็นเฉพาะกรณีแก้ไขคะแนนที่เผยแพร่แล้ว">
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid var(--border-glass)">
+        <button class="btn btn-danger btn-sm" onclick="window.app.submitRequestRevision()">ส่งกลับให้แก้ไข</button>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-secondary btn-sm" onclick="window.app.closeGradingModal()">ปิด</button>
+          <button class="btn btn-primary btn-sm" onclick="window.app.submitPublishGrade()">เผยแพร่คะแนน (PUBLISH)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: APP SETTINGS -->
+  <div id="modal-settings" class="modal-overlay" style="display:none">
+    <div class="modal-content" style="max-width:540px">
+      <div class="modal-header">
+        <h3 class="modal-title">ตั้งค่าการเชื่อมต่อระบบ (SYSTEM CONFIG)</h3>
+        <button class="modal-close" onclick="document.getElementById('modal-settings').style.display='none'">✕</button>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="input-gas-url">GOOGLE APPS SCRIPT WEB APP URL</label>
+        <input type="url" id="input-gas-url" class="form-control" placeholder="https://script.google.com/macros/s/.../exec" style="font-family:var(--font-mono);font-size:12px">
+        <div style="font-size:12px;color:var(--text-muted);margin-top:4px">เมื่อ Deploy Web App จาก Apps Script แล้ว ให้นำ URL มาวางที่นี่</div>
+      </div>
+
+      <div class="form-group" style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" id="check-demo-mode" style="width:18px;height:18px;accent-color:var(--cyan-neon)">
+        <label for="check-demo-mode" style="font-size:14px;font-weight:600">เปิดโหมดจำลอง (Interactive Demo Mode สำหรับการทดสอบบน GitHub Pages)</label>
+      </div>
+
+      <div style="background:rgba(15,23,42,0.8);border:1px solid var(--border-glass);padding:14px;border-radius:var(--radius-md);margin-bottom:18px;font-size:12px;color:var(--text-muted)">
+        <div style="font-family:var(--font-hud);color:var(--text-cyan);font-weight:700;margin-bottom:6px">📊 CLOUD ASSETS CONNECTED:</div>
+        <div>Google Sheets Database ID: <code style="color:#fff;word-break:break-all">1w3EQQfI2cK9-fmfLzbn3vzaTd-V81JCTT8Hwa8WhiA0</code></div>
+        <div style="margin-top:4px">Google Drive Root ID: <code style="color:#fff;word-break:break-all">1FKKFSYOfzwdRuehjG9Ha_6yoKbc4dMWs</code></div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:12px">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-settings').style.display='none'">ยกเลิก</button>
+        <button class="btn btn-primary" onclick="window.app.saveSettings()">บันทึกการตั้งค่า</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/mock-backend.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

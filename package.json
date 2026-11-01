@@ -1,0 +1,23 @@
+{
+  "name": "physicshealthtech-v2",
+  "version": "2.0.0",
+  "description": "PhysicsHealthTech V2.0 - Student Portfolio & Teacher Grading Platform",
+  "main": "index.html",
+  "scripts": {
+    "test": "node tests/run-all-tests.js",
+    "test:unit": "node tests/unit/grading-engine.test.js && node tests/unit/syllabus-validator.test.js && node tests/unit/auth-security.test.js && node tests/unit/sanitization.test.js",
+    "test:security": "node tests/security/idor-negative.test.js",
+    "test:integration": "node tests/integration/student-dashboard.test.js && node tests/integration/teacher-gradebook.test.js"
+  },
+  "keywords": [
+    "physics",
+    "healthtech",
+    "grading",
+    "google-apps-script",
+    "portfolio"
+  ],
+  "author": "PhysicsHealthTech Team",
+  "license": "UNLICENSED",
+  "private": true
+}
+
