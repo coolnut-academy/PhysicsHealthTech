@@ -11,12 +11,14 @@ const runSanitizationTests = require("./unit/sanitization.test");
 const runIdorNegativeTests = require("./security/idor-negative.test");
 const runStudentDashboardTests = require("./integration/student-dashboard.test");
 const runTeacherGradebookTests = require("./integration/teacher-gradebook.test");
+const runLifecycleAndIsolationTests = require("./test-lifecycle-and-isolation");
+const runRevisionImmutabilityTests = require("./test-revision-immutability");
 
 console.log("===============================================================");
 console.log("     PhysicsHealthTech V2.0 - Comprehensive Test Suite         ");
 console.log("===============================================================\n");
 
-let totalSuites = 7;
+let totalSuites = 9;
 let passedSuites = 0;
 
 try {
@@ -41,6 +43,12 @@ try {
   runTeacherGradebookTests();
   passedSuites++;
 
+  runLifecycleAndIsolationTests();
+  passedSuites++;
+
+  runRevisionImmutabilityTests();
+  passedSuites++;
+
   console.log("===============================================================");
   console.log(`🎉 ALL ${passedSuites}/${totalSuites} TEST SUITES PASSED SUCCESSFULLY!`);
   console.log("Verified Cases:");
@@ -50,6 +58,8 @@ try {
   console.log("  - GR19, GR20, GR21, GR22, GR23, GR24, GR25, GR27, GR29, GR30");
   console.log("  - SEC01, SEC02, SEC03, SEC04, SEC05, SEC06, SEC07, SEC10, SEC12");
   console.log("  - DATA01, DATA02, DATA05, DATA06, DATA07, DATA10");
+  console.log("  - Multi-Year Lifecycle, Grade Isolation & Roster Promotion");
+  console.log("  - Revision, Anti-Sabotage Immutability & Multi-Version History");
   console.log("===============================================================\n");
   process.exit(0);
 
@@ -58,4 +68,3 @@ try {
   console.error(err);
   process.exit(1);
 }
-

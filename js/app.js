@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const app = {
     currentTab: "dashboard",
     currentGrade: "M4",
-    currentYearId: "yr_2570",
+    currentYearId: "yr_2569",
     currentRoom: "1",
     selectedWorksheet: null,
     selectedUploadFiles: [], // Array of { name, mime, base64, size }
@@ -221,6 +221,30 @@ document.addEventListener("DOMContentLoaded", () => {
         this.loadTeacherMatrix();
       });
 
+      document.getElementById("teacher-year-select")?.addEventListener("change", (e) => {
+        this.currentYearId = e.target.value;
+        this.loadTeacherMatrix();
+      });
+
+      document.getElementById("btn-download-template")?.addEventListener("click", () => {
+        this.downloadRosterTemplate();
+      });
+
+      document.getElementById("btn-import-roster")?.addEventListener("click", () => {
+        this.openImportRosterModal();
+      });
+
+      document.getElementById("import-csv-file")?.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            document.getElementById("import-csv-text").value = evt.target.result;
+          };
+          reader.readAsText(file, "UTF-8");
+        }
+      });
+
       document.getElementById("btn-export-gradebook")?.addEventListener("click", () => {
         this.exportGradebook();
       });
@@ -288,7 +312,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async handleStudentLogin() {
       const code = document.getElementById("student-code").value.trim();
-      const secret = document.getElementById("student-secret").value.trim();
+      const secretEl = document.getElementById("student-secret");
+      const secret = secretEl ? secretEl.value.trim() : "";
       const errBox = document.getElementById("auth-error-box");
       errBox.style.display = "none";
 
@@ -300,6 +325,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (res.ok) {
           window.apiClient.setSession(res.data.session_token, res.data.profile);
+          if (res.data.profile.grade) {
+            this.currentGrade = res.data.profile.grade;
+          }
+          if (res.data.profile.academic_year_id) {
+            this.currentYearId = res.data.profile.academic_year_id;
+          }
           this.showLoggedInView("student", res.data.profile);
         } else {
           errBox.textContent = res.error.message_th || "เข้าสู่ระบบไม่สำเร็จ";
@@ -368,6 +399,44 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderStudentDashboard(data) {
       const { profile, score_summary, worksheet_summary, worksheet_cards } = data;
+
+      // Dynamic Grade Isolation & Year Switcher
+      const contextEl = document.getElementById("student-enrollment-context");
+      if (contextEl) {
+        const enrollments = profile.available_enrollments || [];
+        const hasMultipleYears = enrollments.length > 1;
+
+        let yearSelectHtml = "";
+        if (hasMultipleYears) {
+          yearSelectHtml = `
+            <div style="display:flex;align-items:center;gap:6px">
+              <span style="font-size:12px;color:var(--text-muted)">เลือกปีการศึกษา:</span>
+              <select id="student-year-switcher" class="form-control" style="width:auto;min-height:34px;padding:2px 10px;font-family:var(--font-hud);font-size:12px">
+                ${enrollments.map(e => `
+                  <option value="${e.academic_year_id}" data-grade="${e.grade}" ${e.academic_year_id === this.currentYearId ? 'selected' : ''}>
+                    ปีการศึกษา ${e.year_be} (${e.grade === 'M4' ? 'ม.4' : 'ม.5'})
+                  </option>
+                `).join("")}
+              </select>
+            </div>
+          `;
+        }
+
+        contextEl.innerHTML = `
+          <div class="status-badge status-submitted" style="font-size:13px;padding:6px 14px">
+            🎓 ระดับชั้น: มัธยมศึกษาปีที่ ${profile.grade === "M4" ? "4" : "5"} (ห้อง ${profile.room || "1"} เลขที่ ${profile.roll_no || "-"})
+          </div>
+          ${yearSelectHtml}
+        `;
+
+        const yearSwitcher = contextEl.querySelector("#student-year-switcher");
+        yearSwitcher?.addEventListener("change", (e) => {
+          const selectedOption = e.target.selectedOptions[0];
+          this.currentYearId = e.target.value;
+          this.currentGrade = selectedOption.dataset.grade || "M4";
+          this.loadStudentDashboard();
+        });
+      }
 
       // Profile banner
       const banner = document.getElementById("student-profile-banner");
@@ -458,14 +527,26 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
           <div style="margin-top:auto;padding-top:14px">
             <button class="btn btn-primary btn-sm btn-open-upload" style="width:100%" data-code="${card.worksheet_code}" data-title="${card.title}">
-              📷 ${card.main_status === "not_submitted" ? "ถ่ายภาพ / ส่งงาน" : "ส่งงานใหม่ (RESUBMIT)"}
+              📤 ${card.main_status === "not_submitted" ? "แนบรูป / ส่งงาน" : `ส่งงานใหม่ / ปรับปรุง (Resubmit v${(card.submission_latest_version_no || 1) + 1})`}
             </button>
+            ${card.submission_latest_version_no > 0 ? `
+              <button class="btn btn-outline btn-sm btn-view-history" style="width:100%;margin-top:8px;font-size:12px;display:flex;align-items:center;justify-content:center;gap:6px" data-code="${card.worksheet_code}" data-title="${card.title}">
+                📜 ดูประวัติการส่งงาน (${card.submission_latest_version_no} เวอร์ชัน)
+              </button>
+            ` : ""}
           </div>
         `;
 
         cardEl.querySelector(".btn-open-upload").addEventListener("click", () => {
           this.openUploadModal(card);
         });
+
+        const histBtn = cardEl.querySelector(".btn-view-history");
+        if (histBtn) {
+          histBtn.addEventListener("click", () => {
+            this.openStudentHistoryModal(card.worksheet_code, card.title);
+          });
+        }
 
         container.appendChild(cardEl);
       });
@@ -663,6 +744,68 @@ document.addEventListener("DOMContentLoaded", () => {
       const { worksheets_header, rows } = data;
       const container = document.getElementById("teacher-matrix-wrapper");
 
+      // Active tracker worksheet selection
+      if (!this.selectedTrackerWs || !worksheets_header.some(w => w.code === this.selectedTrackerWs)) {
+        this.selectedTrackerWs = worksheets_header[0] ? worksheets_header[0].code : "";
+      }
+
+      const getTrackerHtml = (wsCode) => {
+        const wsInfo = worksheets_header.find(w => w.code === wsCode) || worksheets_header[0];
+        const submittedStudents = [];
+        const missingStudents = [];
+
+        rows.forEach(r => {
+          const cell = r.worksheet_cells.find(c => c.worksheet_code === wsCode);
+          if (cell && cell.main_status !== "not_submitted") {
+            submittedStudents.push(r);
+          } else {
+            missingStudents.push(r);
+          }
+        });
+
+        const missingPills = missingStudents.map(s => `
+          <span class="missing-pill" title="รหัส ${s.code_5_digit}">
+            เลขที่ ${s.roll_no} ${s.display_name}
+          </span>
+        `).join("");
+
+        return `
+          <div class="card" style="padding:16px 20px;margin-bottom:20px;background:rgba(15,23,42,0.9);border:1px solid var(--border-glass)">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:12px">
+              <div>
+                <span style="font-family:var(--font-hud);font-weight:700;color:var(--text-cyan);font-size:14px">
+                  📋 ติดตามการส่งงาน: ${wsInfo ? wsInfo.title || wsInfo.code : wsCode}
+                </span>
+                <span style="font-size:12px;color:var(--text-muted);margin-left:8px">
+                  (ส่งแล้ว ${submittedStudents.length} / ${rows.length} คน)
+                </span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <label for="select-tracker-ws" style="font-size:12px;color:var(--text-muted)">เลือกใบงาน:</label>
+                <select id="select-tracker-ws" class="form-control" style="min-height:34px;padding:2px 10px;width:140px;font-family:var(--font-hud);font-size:12px">
+                  ${worksheets_header.map(ws => `<option value="${ws.code}" ${ws.code === wsCode ? 'selected' : ''}>${ws.code}</option>`).join("")}
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-top:10px">
+              ${missingStudents.length === 0 ? `
+                <div style="color:var(--emerald-bio);font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px">
+                  <span>🎉</span> ทุกคนในห้องเรียนส่งใบงานนี้ครบถ้วนแล้ว (${rows.length} คน)
+                </div>
+              ` : `
+                <div style="font-size:13px;color:#fb7185;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px">
+                  <span>🚨</span> เลขที่ที่ยังขาดส่ง (${missingStudents.length} คน):
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:4px;max-height:160px;overflow-y:auto;padding:8px;background:rgba(10,15,30,0.6);border-radius:var(--radius-sm)">
+                  ${missingPills}
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+      };
+
       const thWorksheets = worksheets_header.map(ws => `
         <th title="${ws.title}" style="text-align:center">${ws.code}</th>
       `).join("");
@@ -695,6 +838,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }).join("");
 
       container.innerHTML = `
+        ${getTrackerHtml(this.selectedTrackerWs)}
         <div class="matrix-container">
           <table class="matrix-table">
             <thead>
@@ -716,6 +860,13 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
 
+      // Bind tracker change event
+      const trackerSelect = container.querySelector("#select-tracker-ws");
+      trackerSelect?.addEventListener("change", (e) => {
+        this.selectedTrackerWs = e.target.value;
+        this.renderTeacherMatrix(data);
+      });
+
       // Bind click on cells to open teacher grading modal
       container.querySelectorAll(".btn-grade-cell").forEach(btn => {
         btn.addEventListener("click", () => {
@@ -729,14 +880,192 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     },
 
-    openGradingModal(ctx) {
+    async openGradingModal(ctx) {
       this.gradingContext = ctx;
-      document.getElementById("modal-grading-title").textContent = `ตรวจและให้คะแนน: ${ctx.worksheet_code} (${ctx.student_name})`;
+      document.getElementById("modal-grading-title").textContent = `ตรวจให้คะแนนใบงาน: ${ctx.worksheet_code} (${ctx.student_name})`;
       document.getElementById("grading-task-code").value = ctx.worksheet_code.replace("W", "T");
       document.getElementById("grading-points").value = "";
       document.getElementById("grading-feedback").value = "";
       document.getElementById("grading-reason").value = "";
       document.getElementById("modal-grading").style.display = "flex";
+
+      const selectEl = document.getElementById("grading-version-select");
+      const timestampEl = document.getElementById("grading-version-timestamp");
+      const noteEl = document.getElementById("grading-version-note");
+      const filesEl = document.getElementById("grading-version-files");
+
+      if (selectEl) selectEl.innerHTML = `<option value="">กำลังโหลดประวัติผลงาน...</option>`;
+      if (timestampEl) timestampEl.textContent = "📅 กำลังโหลดประวัติผลงาน...";
+      if (noteEl) noteEl.textContent = "💬 บันทึกจากนักเรียน: -";
+      if (filesEl) filesEl.innerHTML = "";
+
+      try {
+        const res = await window.apiClient.call("submissions.history", {
+          student_uid: ctx.student_uid,
+          worksheet_code: ctx.worksheet_code,
+          academic_year_id: this.currentYearId,
+          grade: this.currentGrade
+        });
+
+        if (!res.ok || !res.data || !res.data.versions || res.data.versions.length === 0) {
+          if (selectEl) selectEl.innerHTML = `<option value="">ยังไม่มีข้อมูลการส่งงาน</option>`;
+          if (timestampEl) timestampEl.textContent = "📅 ยังไม่มีข้อมูลการส่งงานสำหรับใบงานนี้";
+          if (noteEl) noteEl.textContent = "💬 ยังไม่มีบันทึก";
+          if (filesEl) filesEl.innerHTML = `<span style="font-size:12px;color:var(--text-dim)">ไม่มีไฟล์แนบ</span>`;
+          return;
+        }
+
+        const versions = res.data.versions;
+        this.gradingVersions = versions;
+
+        if (selectEl) {
+          selectEl.innerHTML = versions.map((v, idx) => `
+            <option value="${v.version_no}" ${idx === 0 ? 'selected' : ''}>
+              v${v.version_no} ${idx === 0 ? '(ล่าสุด)' : '(เก่า)'} - ${new Date(v.submitted_at).toLocaleDateString('th-TH')}
+            </option>
+          `).join("");
+        }
+
+        const renderVersion = (verNo) => {
+          const v = versions.find(item => String(item.version_no) === String(verNo)) || versions[0];
+          if (timestampEl) {
+            timestampEl.innerHTML = `📅 <strong>ส่งเมื่อ:</strong> ${new Date(v.submitted_at).toLocaleString('th-TH')} <span style="margin-left:8px;padding:2px 8px;border-radius:4px;font-family:var(--font-mono);font-size:11px;font-weight:700;background:${v.version_no === versions[0].version_no ? 'rgba(56,189,248,0.2);color:#38bdf8' : 'rgba(148,163,184,0.2);color:#94a3b8'}">Version ${v.version_no}</span>`;
+          }
+          if (noteEl) {
+            noteEl.innerHTML = `💬 <strong>บันทึกจากนักเรียน:</strong> ${v.note ? v.note : '<em style="color:var(--text-dim)">(ไม่มีข้อความ)</em>'}`;
+          }
+
+          if (filesEl) {
+            if (!v.files || v.files.length === 0) {
+              filesEl.innerHTML = `<span style="font-size:12px;color:var(--text-dim)">ไม่มีไฟล์แนบในเวอร์ชันนี้</span>`;
+            } else {
+              filesEl.innerHTML = v.files.map(f => `
+                <div class="evidence-thumb" style="width:76px;height:76px;border-radius:8px;overflow:hidden;border:1px solid rgba(56,189,248,0.4);cursor:pointer;position:relative" data-evidence-id="${f.evidence_id}" title="คลิกเพื่อดูภาพขยาย">
+                  <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(30,41,59,0.8);font-size:24px">
+                    📄
+                  </div>
+                </div>
+              `).join("");
+
+              filesEl.querySelectorAll(".evidence-thumb").forEach(thumb => {
+                const evId = thumb.dataset.evidenceId;
+                this.loadThumbnailPreview(thumb, evId);
+                thumb.addEventListener("click", () => {
+                  this.openImagePreview(evId, `${ctx.worksheet_code} (v${v.version_no}) - ${ctx.student_name}`);
+                });
+              });
+            }
+          }
+        };
+
+        renderVersion(versions[0].version_no);
+
+        if (selectEl) {
+          selectEl.onchange = (e) => {
+            renderVersion(e.target.value);
+          };
+        }
+
+      } catch (err) {
+        if (timestampEl) timestampEl.textContent = "เกิดข้อผิดพลาดในการโหลดประวัติ: " + err.message;
+      }
+    },
+
+    async openStudentHistoryModal(worksheetCode, title) {
+      document.getElementById("modal-history-title").textContent = `📜 ประวัติการส่งงาน: ${worksheetCode} - ${title}`;
+      const timelineEl = document.getElementById("student-history-timeline");
+      timelineEl.innerHTML = `<div style="text-align:center;color:var(--text-cyan);padding:24px;font-family:var(--font-hud)">กำลังโหลดประวัติผลงาน...</div>`;
+      document.getElementById("modal-student-history").style.display = "flex";
+
+      try {
+        const res = await window.apiClient.call("submissions.history", {
+          worksheet_code: worksheetCode,
+          academic_year_id: this.currentYearId,
+          grade: this.currentGrade
+        });
+
+        if (!res.ok || !res.data || !res.data.versions || res.data.versions.length === 0) {
+          timelineEl.innerHTML = `<div style="text-align:center;color:var(--text-dim);padding:24px">ยังไม่มีประวัติการส่งงานสำหรับใบงานนี้</div>`;
+          return;
+        }
+
+        const versions = res.data.versions;
+        timelineEl.innerHTML = versions.map((v, idx) => `
+          <div style="background:rgba(15,23,42,0.7);border:1px solid ${idx === 0 ? 'rgba(56,189,248,0.4)' : 'rgba(148,163,184,0.18)'};border-radius:10px;padding:14px;position:relative">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="font-family:var(--font-mono);font-weight:700;font-size:13px;color:${idx === 0 ? 'var(--cyan-neon)' : 'var(--text-muted)'}">
+                ${idx === 0 ? '⚡ Version ' + v.version_no + ' (ล่าสุด)' : 'Version ' + v.version_no}
+              </span>
+              <span style="font-size:12px;color:var(--text-dim)">
+                📅 ${new Date(v.submitted_at).toLocaleString('th-TH')}
+              </span>
+            </div>
+            ${v.note ? `
+              <div style="font-size:13px;color:#e2e8f0;margin-bottom:10px;background:rgba(2,132,199,0.06);padding:8px 12px;border-radius:6px">
+                💬 <strong>บันทึก:</strong> ${v.note}
+              </div>
+            ` : ""}
+            <div style="font-size:12px;color:var(--text-cyan);font-weight:700;margin-bottom:6px">🖼️ รูปภาพผลงาน (${v.files.length} รูป):</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              ${v.files.map(f => `
+                <div class="evidence-thumb" style="width:72px;height:72px;border-radius:6px;overflow:hidden;border:1px solid rgba(56,189,248,0.3);cursor:pointer;position:relative" data-evidence-id="${f.evidence_id}" title="คลิกเพื่อดูภาพขยาย">
+                  <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(30,41,59,0.8);font-size:22px">
+                    📄
+                  </div>
+                </div>
+              `).join("")}
+            </div>
+          </div>
+        `).join("");
+
+        timelineEl.querySelectorAll(".evidence-thumb").forEach(thumb => {
+          const evId = thumb.dataset.evidenceId;
+          this.loadThumbnailPreview(thumb, evId);
+          thumb.addEventListener("click", () => {
+            this.openImagePreview(evId, `ใบงาน ${worksheetCode}`);
+          });
+        });
+
+      } catch (err) {
+        timelineEl.innerHTML = `<div style="color:var(--crimson-alert);padding:20px">เกิดข้อผิดพลาด: ${err.message}</div>`;
+      }
+    },
+
+    closeHistoryModal() {
+      document.getElementById("modal-student-history").style.display = "none";
+    },
+
+    async loadThumbnailPreview(containerEl, evidenceId) {
+      try {
+        const res = await window.apiClient.call("evidence.preview", { evidence_id: evidenceId });
+        if (res.ok && (res.data.data_url || res.data.file_base64)) {
+          const src = res.data.data_url || `data:${res.data.mime_type || 'image/jpeg'};base64,${res.data.file_base64}`;
+          containerEl.innerHTML = `<img src="${src}" alt="thumb" style="width:100%;height:100%;object-fit:cover">`;
+        }
+      } catch (e) {}
+    },
+
+    async openImagePreview(evidenceId, title) {
+      const modal = document.getElementById("modal-image-preview");
+      const titleEl = document.getElementById("preview-image-title");
+      const imgEl = document.getElementById("preview-image-el");
+
+      titleEl.textContent = `🖼️ รูปภาพผลงาน: ${title || ''}`;
+      imgEl.src = "";
+      modal.style.display = "flex";
+
+      try {
+        const res = await window.apiClient.call("evidence.preview", { evidence_id: evidenceId });
+        if (res.ok && (res.data.data_url || res.data.file_base64)) {
+          imgEl.src = res.data.data_url || `data:${res.data.mime_type || 'image/jpeg'};base64,${res.data.file_base64}`;
+        } else {
+          alert("ไม่สามารถแสดงรูปภาพได้: " + (res.error?.message_th || "ไม่พบรูปภาพ"));
+          modal.style.display = "none";
+        }
+      } catch (err) {
+        alert("เกิดข้อผิดพลาดในการโหลดรูปภาพ: " + err.message);
+        modal.style.display = "none";
+      }
     },
 
     closeGradingModal() {
@@ -758,7 +1087,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const res = await window.apiClient.call("teacher.publishGrade", {
           student_uid: this.gradingContext.student_uid,
-          syllabus_version_id: this.currentGrade === "M4" ? "syl_m4_2570_v1" : "syl_m5_2570_v1",
+          syllabus_version_id: `syl_${this.currentGrade.toLowerCase()}_${this.currentYearId.replace('yr_', '')}_v1`,
           task_code: "T4-01",
           points_int: pointsInt,
           feedback: feedback,
@@ -804,6 +1133,128 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       } catch (err) {
         alert("เกิดข้อผิดพลาด: " + err.message);
+      }
+    },
+
+    downloadRosterTemplate() {
+      const csv = "\uFEFFcode_5_digit,display_name,grade,room,roll_no\r\n17763,นายพิพัฒน์ จุลบุตร,M5,1,1\r\n17808,นายอโณทัย จรัญไชยกุล,M5,1,2\r\n17837,นายชัชพงษ์ ไชยา,M5,1,3";
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "student_enrollment_template.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+
+    openImportRosterModal() {
+      const modal = document.getElementById("modal-import-roster");
+      if (modal) {
+        document.getElementById("import-status-box").style.display = "none";
+        document.getElementById("import-csv-text").value = "";
+        document.getElementById("import-csv-file").value = "";
+        modal.style.display = "flex";
+      }
+    },
+
+    parseRosterCsv(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) return [];
+      const rawHeaders = lines[0].split(",").map(h => h.trim().replace(/^[\uFEFF"']+|["']+$/g, ""));
+
+      const headers = rawHeaders.map(h => {
+        const lower = h.toLowerCase();
+        if (lower.includes("code") || lower.includes("ประจำตัว") || lower.includes("รหัส")) return "code_5_digit";
+        if (lower.includes("display") || lower.includes("ชื่อ - นามสกุล") || lower.includes("ชื่อ-นามสกุล") || lower.includes("ชื่อและนามสกุล") || lower.includes("ชื่อ - สกุล") || lower.includes("ชื่อ-สกุล")) return "display_name";
+        if (lower.includes("title") || lower.includes("คำนำหน้า")) return "title";
+        if (lower.includes("fname") || lower.includes("first") || lower === "ชื่อ") return "first_name";
+        if (lower.includes("lname") || lower.includes("last") || lower === "นามสกุล") return "last_name";
+        if (lower.includes("grade") || lower.includes("ชั้น") || lower.includes("ระดับ")) return "grade";
+        if (lower.includes("room") || lower.includes("ห้อง")) return "room";
+        if (lower.includes("roll") || lower.includes("ที่") || lower.includes("เลขที่")) return "roll_no";
+        return lower;
+      });
+
+      const students = [];
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const parts = line.split(",").map(p => p.trim().replace(/^["']+|["']+$/g, ""));
+        const row = {};
+        headers.forEach((h, idx) => {
+          if (h) row[h] = parts[idx] !== undefined ? parts[idx] : "";
+        });
+        if (row.code_5_digit) {
+          students.push(row);
+        }
+      }
+      return students;
+    },
+
+    async submitImportRoster() {
+      const yearBe = document.getElementById("import-year-be").value.trim();
+      const csvText = document.getElementById("import-csv-text").value.trim();
+      const statusBox = document.getElementById("import-status-box");
+
+      if (!csvText) {
+        statusBox.style.display = "block";
+        statusBox.style.background = "rgba(244,63,94,0.2)";
+        statusBox.style.color = "#fb7185";
+        statusBox.textContent = "โปรดเลือกไฟล์ CSV หรือวางข้อความข้อมูลนักเรียนก่อนกดนำเข้า";
+        return;
+      }
+
+      const students = this.parseRosterCsv(csvText);
+      if (students.length === 0) {
+        statusBox.style.display = "block";
+        statusBox.style.background = "rgba(244,63,94,0.2)";
+        statusBox.style.color = "#fb7185";
+        statusBox.textContent = "ไม่พบข้อมูลแถวนักเรียนที่ถูกต้องในไฟล์ CSV (ต้องมีรหัสนักเรียน 5 หลัก)";
+        return;
+      }
+
+      statusBox.style.display = "block";
+      statusBox.style.background = "rgba(2,132,199,0.2)";
+      statusBox.style.color = "#38bdf8";
+      statusBox.textContent = `กำลังนำเข้าข้อมูลนักเรียน ${students.length} คน สำหรับปีการศึกษา ${yearBe}...`;
+
+      try {
+        const res = await window.apiClient.call("teacher.importRoster", {
+          year_be: parseInt(yearBe, 10),
+          students: students
+        });
+
+        if (res.ok) {
+          statusBox.style.background = "rgba(16,185,129,0.2)";
+          statusBox.style.color = "#34d399";
+          statusBox.textContent = `สำเร็จ! ${res.data.message_th} (นักเรียนใหม่: ${res.data.new_students || 0}, นักเรียนเดิมเลื่อนชั้น: ${res.data.existing_students || 0})`;
+
+          const yrSelect = document.getElementById("teacher-year-select");
+          const yrValue = `yr_${yearBe}`;
+          if (!Array.from(yrSelect.options).some(o => o.value === yrValue)) {
+            const opt = document.createElement("option");
+            opt.value = yrValue;
+            opt.textContent = `ปีการศึกษา ${yearBe}`;
+            yrSelect.appendChild(opt);
+          }
+          yrSelect.value = yrValue;
+          this.currentYearId = yrValue;
+
+          setTimeout(() => {
+            document.getElementById("modal-import-roster").style.display = "none";
+            this.loadTeacherMatrix();
+          }, 1500);
+        } else {
+          statusBox.style.background = "rgba(244,63,94,0.2)";
+          statusBox.style.color = "#fb7185";
+          statusBox.textContent = res.error.message_th || "การนำเข้าล้มเหลว";
+        }
+      } catch (err) {
+        statusBox.style.background = "rgba(244,63,94,0.2)";
+        statusBox.style.color = "#fb7185";
+        statusBox.textContent = "เกิดข้อผิดพลาด: " + err.message;
       }
     },
 

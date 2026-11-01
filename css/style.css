@@ -373,6 +373,34 @@ body::after {
   box-shadow: 0 0 10px rgba(251, 191, 36, 0.25);
 }
 
+.missing-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid rgba(244, 63, 94, 0.45);
+  color: #fb7185;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-family: var(--font-hud);
+  font-weight: 600;
+  margin: 3px;
+}
+
+.submitted-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-family: var(--font-hud);
+  font-weight: 600;
+  margin: 3px;
+}
+
 .badge-overdue {
   display: inline-flex;
   align-items: center;

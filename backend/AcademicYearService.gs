@@ -183,6 +183,145 @@ const AcademicYearService = {
         message_th: "เปิดใช้งานปีการศึกษาเรียบร้อยแล้ว"
       }
     };
+  },
+
+  /**
+   * Import batch student roster for an Academic Year (AC05, DATA07)
+   * Auto-promotes existing students using their original student_uid
+   * Creates new academic year and syllabi if they do not exist
+   */
+  importRoster(session, payload, repository) {
+    Authorization.enforceTeacher(session);
+    const { year_be, students: rosterRows } = payload || {};
+
+    const yearBeInt = parseInt(year_be, 10);
+    if (isNaN(yearBeInt) || yearBeInt < 2500 || yearBeInt > 2700) {
+      throw new Error("INVALID_YEAR: ปีการศึกษา (พ.ศ.) ไม่ถูกต้อง");
+    }
+
+    if (!Array.isArray(rosterRows) || rosterRows.length === 0) {
+      throw new Error("INVALID_REQUEST: ไม่พบข้อมูลนักเรียนสำหรับการนำเข้า");
+    }
+
+    const yearId = `yr_${yearBeInt}`;
+    const now = new Date().toISOString();
+
+    // 1. Ensure Academic Year exists and is open
+    let year = repository.findAcademicYearByBe(yearBeInt);
+    if (!year) {
+      year = {
+        academic_year_id: yearId,
+        year_be: yearBeInt,
+        state: "open",
+        creation_op_id: `op_import_${AuthService.generateSecureToken().substring(0, 12)}`,
+        created_at: now,
+        published_at: now,
+        revision: 1
+      };
+      repository.saveAcademicYear(year);
+    } else if (year.state !== "open") {
+      year.state = "open";
+      repository.updateAcademicYear(year);
+    }
+
+    // 2. Ensure Syllabi exist for M4 and M5
+    const grades = ["M4", "M5"];
+    for (const g of grades) {
+      let syl = repository.findPublishedSyllabus(yearId, g);
+      if (!syl) {
+        const sylId = `syl_${g.toLowerCase()}_${yearBeInt}_v1`;
+        syl = {
+          syllabus_version_id: sylId,
+          academic_year_id: yearId,
+          grade: g,
+          version_no: 1,
+          course_max_points_int: 10000,
+          sessions_count: 20,
+          minutes_per_session: 100,
+          state: "published",
+          created_at: now
+        };
+        repository.savePublishedSyllabus(syl);
+      }
+    }
+
+    // 3. Process each student row
+    let newStudentsCount = 0;
+    let existingStudentsCount = 0;
+    let enrollmentsCount = 0;
+
+    for (const row of rosterRows) {
+      const rawCode = String(row.code_5_digit || "").trim().replace(/^'/, "");
+      if (!rawCode) continue;
+      const code5Digit = rawCode.padStart(5, "0");
+
+      let displayName = (row.display_name || "").trim();
+      if (!displayName && (row.first_name || row.fname)) {
+        const title = (row.title || "").trim();
+        const fname = (row.first_name || row.fname || "").trim();
+        const lname = (row.last_name || row.lname || "").trim();
+        displayName = `${title}${fname} ${lname}`.trim();
+      }
+      if (!displayName) displayName = `นักเรียนรหัส ${code5Digit}`;
+
+      const grade = (row.grade || "M4").toUpperCase().trim();
+      const room = String(row.room || "1").trim();
+      const rollNo = parseInt(row.roll_no || 0, 10) || 0;
+
+      // Find existing student by code_5_digit
+      let student = repository.findStudentByCode(code5Digit);
+      let studentUid = "";
+
+      if (student) {
+        studentUid = student.student_uid;
+        existingStudentsCount++;
+        if (displayName && displayName !== student.display_name) {
+          student.display_name = displayName;
+          repository.saveStudent(student);
+        }
+      } else {
+        studentUid = `std_${code5Digit}`;
+        student = {
+          student_uid: studentUid,
+          code_5_digit: code5Digit,
+          display_name: displayName,
+          status: "active",
+          credential_version: 1,
+          created_at: now,
+          updated_at: now,
+          deleted_at: ""
+        };
+        repository.saveStudent(student);
+        newStudentsCount++;
+      }
+
+      // Upsert enrollment for this academic year
+      const enrId = `enr_${yearBeInt}_${grade.toLowerCase()}_${String(rollNo).padStart(3, "0")}`;
+      const enrollment = {
+        enrollment_id: enrId,
+        academic_year_id: yearId,
+        student_uid: studentUid,
+        grade: grade,
+        room: room,
+        roll_no: rollNo,
+        status: "active",
+        created_at: now
+      };
+      repository.saveEnrollment(enrollment);
+      enrollmentsCount++;
+    }
+
+    return {
+      ok: true,
+      data: {
+        academic_year_id: yearId,
+        year_be: yearBeInt,
+        total_processed: enrollmentsCount,
+        new_students: newStudentsCount,
+        existing_students: existingStudentsCount,
+        message_th: `นำเข้าข้อมูลปีการศึกษา ${yearBeInt} เรียบร้อยแล้ว (${enrollmentsCount} คน)`
+      }
+    };
   }
 };
 

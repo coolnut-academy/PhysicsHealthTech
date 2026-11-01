@@ -73,13 +73,15 @@
         <form id="form-student-login">
           <div class="form-group">
             <label class="form-label" for="student-code">รหัสนักเรียน 5 หลัก (STUDENT ID CODE)</label>
-            <input type="text" id="student-code" class="form-control" placeholder="ป้อนรหัส 5 หลัก (เช่น 00007)" maxlength="5" required style="font-family:var(--font-mono)">
+            <input type="text" id="student-code" class="form-control" placeholder="ป้อนรหัส 5 หลัก (เช่น 00007 หรือ 67001)" maxlength="5" required style="font-family:var(--font-mono);font-size:18px;letter-spacing:2px;text-align:center">
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;text-align:center">💡 เข้าสู่ระบบได้ทันทีด้วยรหัสนักเรียน 5 หลัก (ไม่ต้องใช้รหัสผ่าน)</div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="student-secret">รหัสผ่านยืนยันตัวตน (INDEPENDENT PASSCODE)</label>
-            <input type="password" id="student-secret" class="form-control" placeholder="ป้อนรหัสผ่านที่ได้รับจากครู" required>
+          <!-- Optional Passcode for advanced security (hidden by default) -->
+          <div class="form-group" id="container-student-secret" style="display:none">
+            <label class="form-label" for="student-secret">รหัสผ่านยืนยันตัวตน (ถ้ามี)</label>
+            <input type="password" id="student-secret" class="form-control" placeholder="เว้นว่างได้ถ้าไม่ได้ตั้งรหัสผ่าน">
           </div>
-          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px">เข้าสู่ระบบนักเรียน (STUDENT SIGN IN)</button>
+          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:12px;padding:12px;font-size:15px;letter-spacing:0.5px">เข้าสู่ระบบนักเรียน (STUDENT SIGN IN)</button>
 
           <!-- Demo Quick Fill Buttons -->
           <div style="margin-top:24px;padding-top:18px;border-top:1px dashed var(--border-glass)">
@@ -87,9 +89,10 @@
               ⚡ QUICK BIO-CREDENTIALS (ทดสอบระบบด่วน):
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:8px">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('student-code').value='00007';document.getElementById('student-secret').value='PhtSecret#00007A'">นักเรียน 00007 (ม.4)</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('student-code').value='00123';document.getElementById('student-secret').value='PhtSecret#00123B'">นักเรียน 00123 (ม.4)</button>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('student-code').value='91234';document.getElementById('student-secret').value='PhtSecret#91234D'">นักเรียน 91234 (ม.5)</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('student-code').value='17763'">17763 (ม.4 เลขที่ 1 นายพิพัฒน์)</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('student-code').value='17808'">17808 (ม.4 เลขที่ 2 นายอโณทัย)</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('student-code').value='17388'">17388 (ม.5 เลขที่ 1 นายพิตติพันท์)</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('student-code').value='17395'">17395 (ม.5 เลขที่ 2 นายฐิติวัสส์)</button>
             </div>
           </div>
         </form>
@@ -121,11 +124,10 @@
       <!-- Profile & Telemetry Banner -->
       <div id="student-profile-banner"></div>
 
-      <!-- Grade Switcher Toggle -->
+      <!-- Dynamic Enrollment & Grade Context (Grade Isolation) -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:14px">
-        <div style="display:flex;gap:10px">
-          <button id="btn-grade-m4" class="btn btn-primary btn-sm">มัธยมศึกษาปีที่ 4 (9 ใบงาน)</button>
-          <button id="btn-grade-m5" class="btn btn-secondary btn-sm">มัธยมศึกษาปีที่ 5 (9 ใบงาน)</button>
+        <div id="student-enrollment-context" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <!-- Dynamically populated: Grade badge & Year switcher -->
         </div>
         <div style="font-family:var(--font-hud);font-size:13px;color:var(--text-cyan);display:flex;align-items:center;gap:6px">
           <span>⚡ SYLLABUS: 20 SESSIONS (100 MIN EACH)</span>
@@ -206,13 +208,22 @@
           </h2>
           <div style="font-size:13px;color:var(--text-muted)">ตรวจหลักฐาน ให้คะแนนราย Task/Rubric รายบุคคลและกลุ่ม เรียงลำดับเลขที่</div>
         </div>
-        <div style="display:flex;gap:12px">
-          <button id="btn-export-gradebook" class="btn btn-secondary btn-sm">📊 EXPORT GRADEBOOK (CSV)</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button id="btn-download-template" class="btn btn-secondary btn-sm" title="ดาวน์โหลดไฟล์แม่แบบ CSV สำหรับกรอกข้อมูลนักเรียน">📥 โหลดเทมเพลต (TEMPLATE.CSV)</button>
+          <button id="btn-import-roster" class="btn btn-primary btn-sm" title="เปิดปีการศึกษาใหม่ หรือ นำเข้ารายชื่อนักเรียน">➕ นำเข้ารายชื่อ / เปิดปีใหม่</button>
+          <button id="btn-export-gradebook" class="btn btn-secondary btn-sm">📊 ส่งออกคะแนน (CSV)</button>
         </div>
       </div>
 
       <!-- Filters Bar -->
       <div class="card" style="padding:16px 24px;margin-bottom:24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+        <div>
+          <label style="font-family:var(--font-hud);font-size:12px;font-weight:600;color:var(--text-cyan)">ปีการศึกษา (ACADEMIC YEAR):</label>
+          <select id="teacher-year-select" class="form-control" style="min-height:38px;padding:4px 12px;width:160px;font-family:var(--font-hud)">
+            <option value="yr_2569" selected>ปีการศึกษา 2569</option>
+            <option value="yr_2570">ปีการศึกษา 2570</option>
+          </select>
+        </div>
         <div>
           <label style="font-family:var(--font-hud);font-size:12px;font-weight:600;color:var(--text-cyan)">ระดับชั้น (GRADE LEVEL):</label>
           <select id="teacher-grade-select" class="form-control" style="min-height:38px;padding:4px 12px;width:160px;font-family:var(--font-hud)">
@@ -271,6 +282,10 @@
         <button class="modal-close" onclick="window.app.closeUploadModal()">✕</button>
       </div>
 
+      <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#94a3b8;line-height:1.5">
+        <strong style="color:var(--text-cyan)">🛡️ ระบบคุ้มครองผลงาน (Immutable Versioning):</strong><br>
+        หากมีการส่งงานซ้ำ จะบันทึกเป็น <strong>เวอร์ชันใหม่ (New Version)</strong> เสมอ โดยประวัติและภาพเวอร์ชันเดิมจะถูกเก็บรักษาไว้ทั้งหมด และ<strong>ไม่สามารถลบงานได้</strong> เพื่อป้องกันเพื่อนหรือผู้อื่นแอบเข้ามากดลบงาน
+      </div>
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:18px">
         ถ่ายภาพใบงานกระดาษที่ครูตรวจแล้วทุกหน้าอย่างชัดเจน (สูงสุด 5 ภาพ, ไฟล์จะถูกบีบอัดระดับความคมชัดสูงอัตโนมัติ)
       </div>
@@ -301,14 +316,40 @@
 
   <!-- MODAL: TEACHER GRADING DIALOG -->
   <div id="modal-grading" class="modal-overlay" style="display:none">
-    <div class="modal-content" style="max-width:540px">
+    <div class="modal-content" style="max-width:620px">
       <div class="modal-header">
         <h3 id="modal-grading-title" class="modal-title">ตรวจและประเมินผลคะแนน</h3>
         <button class="modal-close" onclick="window.app.closeGradingModal()">✕</button>
       </div>
 
+      <!-- SUBMISSION & VERSION HISTORY SECTION -->
+      <div id="grading-history-section" style="margin-bottom:18px;padding:12px 14px;background:rgba(2,132,199,0.08);border:1px solid rgba(56,189,248,0.3);border-radius:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-family:var(--font-hud);font-size:12px;font-weight:700;color:var(--text-cyan)">
+            ⚡ ผลงานที่ส่ง (SUBMISSION VERSIONS)
+          </span>
+          <div id="grading-version-selector-container" style="display:flex;align-items:center;gap:6px">
+            <label style="font-size:12px;color:var(--text-dim)">เวอร์ชัน:</label>
+            <select id="grading-version-select" class="form-control" style="width:auto;min-height:28px;padding:2px 8px;font-size:12px;font-family:var(--font-mono);font-weight:700">
+              <option value="latest">v1 (ล่าสุด)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="grading-version-details">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px" id="grading-version-timestamp">📅 ส่งเมื่อ: -</div>
+          <div style="font-size:12px;color:#e2e8f0;margin-bottom:10px;background:rgba(15,23,42,0.6);padding:8px 12px;border-radius:6px;border:1px solid rgba(148,163,184,0.15)" id="grading-version-note">
+            💬 บันทึกจากนักเรียน: -
+          </div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-cyan);margin-bottom:6px">🖼️ รูปภาพผลงาน (คลิกเพื่อดูภาพขยาย):</div>
+          <div id="grading-version-files" style="display:flex;flex-wrap:wrap;gap:8px">
+            <span style="font-size:12px;color:var(--text-dim)">ไม่มีไฟล์แนบ</span>
+          </div>
+        </div>
+      </div>
+
       <div class="form-group">
-        <label class="form-label">รหัสงานประเมินตามหลักสูตร (TASK CODE)</label>
+        <label class="form-label">รหัสภารกิจที่ประเมิน (TASK CODE)</label>
         <input type="text" id="grading-task-code" class="form-control" readonly style="font-family:var(--font-mono)">
       </div>
 
@@ -333,6 +374,45 @@
           <button class="btn btn-secondary btn-sm" onclick="window.app.closeGradingModal()">ปิด</button>
           <button class="btn btn-primary btn-sm" onclick="window.app.submitPublishGrade()">เผยแพร่คะแนน (PUBLISH)</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: IMPORT ROSTER / NEW YEAR (TEACHER) -->
+  <div id="modal-import-roster" class="modal-overlay" style="display:none">
+    <div class="modal-content" style="max-width:620px">
+      <div class="modal-header">
+        <h3 class="modal-title">เปิดปีการศึกษาใหม่ / นำเข้าข้อมูลนักเรียน</h3>
+        <button class="modal-close" onclick="document.getElementById('modal-import-roster').style.display='none'">✕</button>
+      </div>
+
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.5">
+        ระบบจะเชื่อมโยงรหัสนักเรียน 5 หลักเดิมโดยอัตโนมัติ (เช่น นร. ม.4 ปี 2569 ที่เลื่อนชั้นขึ้น ม.5 ปี 2570 จะใช้รหัสเดิมและมีประวัติย้อนหลัง)
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="import-year-be">ระบุปีการศึกษา (พ.ศ.)</label>
+        <input type="number" id="import-year-be" class="form-control" value="2570" min="2500" max="2700" required style="font-family:var(--font-mono);font-size:16px;font-weight:700">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">เลือกไฟล์ CSV ข้อมูลนักเรียน</label>
+        <input type="file" id="import-csv-file" accept=".csv,text/csv" class="form-control" style="padding:8px">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">คอลัมน์ที่รองรับ: code_5_digit, display_name, grade, room, roll_no (หรือดาวน์โหลดเทมเพลตมากรอก)</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="import-csv-text">หรือ วางข้อมูล CSV (คัดลอกจาก Excel มาวางได้เลย)</label>
+        <textarea id="import-csv-text" class="form-control" rows="5" placeholder="code_5_digit,display_name,grade,room,roll_no
+17763,นายพิพัฒน์ จุลบุตร,M5,1,1
+17808,นายอโณทัย จรัญไชยกุล,M5,1,2" style="font-family:var(--font-mono);font-size:12px"></textarea>
+      </div>
+
+      <div id="import-status-box" style="display:none;padding:12px;border-radius:var(--radius-md);margin-bottom:14px;font-size:13px"></div>
+
+      <div style="display:flex;justify-content:flex-end;gap:12px">
+        <button class="btn btn-secondary" onclick="document.getElementById('modal-import-roster').style.display='none'">ยกเลิก</button>
+        <button id="btn-submit-import" class="btn btn-primary" onclick="window.app.submitImportRoster()">ยืนยันการนำเข้าข้อมูล (IMPORT)</button>
       </div>
     </div>
   </div>
@@ -374,5 +454,41 @@
   <script src="js/mock-backend.js"></script>
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
+
+  <!-- MODAL: STUDENT SUBMISSION HISTORY -->
+  <div id="modal-student-history" class="modal-overlay" style="display:none">
+    <div class="modal-content" style="max-width:620px">
+      <div class="modal-header">
+        <h3 id="modal-history-title" class="modal-title">📜 ประวัติการส่งงาน</h3>
+        <button class="modal-close" onclick="window.app.closeHistoryModal()">✕</button>
+      </div>
+
+      <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#94a3b8;line-height:1.5">
+        <strong style="color:var(--text-cyan)">🛡️ ระบบประวัติงานแบบไม่สามารถลบได้ (Immutable Versioning):</strong><br>
+        ทุกครั้งที่คุณส่งงานใหม่ ข้อมูลเวอร์ชันเก่าจะไม่หายไป ครูสามารถตรวจสอบย้อนหลังได้ทุกเวอร์ชัน และไม่สามารถลบผลงานได้เพื่อความปลอดภัย
+      </div>
+
+      <div id="student-history-timeline" style="display:flex;flex-direction:column;gap:14px;max-height:450px;overflow-y:auto;padding-right:6px">
+        <!-- Version timeline cards -->
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:18px">
+        <button class="btn btn-secondary" onclick="window.app.closeHistoryModal()">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: IMAGE LIGHTBOX / PREVIEW -->
+  <div id="modal-image-preview" class="modal-overlay" style="display:none;z-index:9999">
+    <div class="modal-content" style="max-width:90vw;max-height:90vh;padding:12px;background:rgba(15,23,42,0.95);display:flex;flex-direction:column;align-items:center">
+      <div style="width:100%;display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <span id="preview-image-title" style="font-family:var(--font-hud);font-size:13px;color:var(--text-cyan)">🖼️ รูปภาพผลงาน</span>
+        <button class="modal-close" onclick="document.getElementById('modal-image-preview').style.display='none'">✕</button>
+      </div>
+      <div style="flex:1;display:flex;justify-content:center;align-items:center;overflow:hidden">
+        <img id="preview-image-el" src="" alt="Worksheet Preview" style="max-width:100%;max-height:75vh;border-radius:6px;object-fit:contain;box-shadow:0 10px 25px rgba(0,0,0,0.5)">
+      </div>
+    </div>
+  </div>
 </body>
 </html>

@@ -24,8 +24,8 @@ const TeacherService = {
     }
 
     const syllabus = repository.findPublishedSyllabus(academic_year_id, grade);
-    const worksheets = syllabus ? syllabus.worksheets : [];
-    const tasks = syllabus ? syllabus.tasks : [];
+    const worksheets = (syllabus && Array.isArray(syllabus.worksheets)) ? syllabus.worksheets : [];
+    const tasks = (syllabus && Array.isArray(syllabus.tasks)) ? syllabus.tasks : [];
 
     // Map tasks and worksheets
     const taskMap = new Map();
@@ -74,12 +74,13 @@ const TeacherService = {
       let revisionCount = 0;
 
       const worksheetCells = worksheets.map(ws => {
-        const sub = subMap.get(ws.code);
+        const wsCode = ws.code || ws.worksheet_code;
+        const sub = subMap.get(wsCode);
         const latestReview = sub ? repository.findLatestEvidenceReview(sub.submission_id) : null;
         
         // Find tasks linked to this worksheet
         const linkedTasks = (syllabus.links || [])
-          .filter(l => l.worksheet_code === ws.code)
+          .filter(l => (l.worksheet_code === wsCode || l.worksheet_code === ws.code))
           .map(l => taskMap.get(l.task_code))
           .filter(Boolean);
 
@@ -95,7 +96,7 @@ const TeacherService = {
         }
 
         return {
-          worksheet_code: ws.code,
+          worksheet_code: wsCode,
           main_status: statusRes.main_status,
           status_label_th: statusRes.status_label_th,
           submission_id: sub ? sub.submission_id : null,
@@ -134,7 +135,7 @@ const TeacherService = {
         grade,
         room: room || "all",
         syllabus_ready: Boolean(syllabus),
-        worksheets_header: worksheets.map(ws => ({ code: ws.code, title: ws.title, order_no: ws.order_no })),
+        worksheets_header: worksheets.map(ws => ({ code: ws.code || ws.worksheet_code, title: ws.title || (`ใบงานที่ ${ws.order_no || 1}`), order_no: ws.order_no || 1 })),
         rows,
         out_of_roster_count: outOfRosterSubmissions.length,
         out_of_roster_items: outOfRosterSubmissions.map(s => ({

@@ -15,7 +15,17 @@ const StudentService = {
    */
   getDashboard(session, payload, repository) {
     const studentUid = Authorization.enforceStudent(session);
-    const { academic_year_id, grade } = payload || {};
+    let { academic_year_id, grade } = payload || {};
+
+    if (!academic_year_id || !grade) {
+      const activeEnr = (repository.findEnrollmentsByStudent(studentUid) || [])
+        .filter(e => e.status === "active")
+        .sort((a, b) => (b.academic_year_id || "").localeCompare(a.academic_year_id || ""))[0];
+      if (activeEnr) {
+        academic_year_id = activeEnr.academic_year_id;
+        grade = activeEnr.grade;
+      }
+    }
 
     if (!academic_year_id || !grade) {
       throw new Error("INVALID_REQUEST: โปรดระบุปีการศึกษาและระดับชั้น");
@@ -30,6 +40,19 @@ const StudentService = {
     const enrollment = repository.findActiveEnrollment(studentUid, academic_year_id, grade);
     const isOutOfRoster = !enrollment;
 
+    const allStudentEnrollments = (repository.getTable("Enrollments") || [])
+      .filter(e => e.student_uid === studentUid && e.status === "active");
+    allStudentEnrollments.sort((a, b) => (repository.getYearBe(b.academic_year_id) || 0) - (repository.getYearBe(a.academic_year_id) || 0));
+
+    const availableEnrollments = allStudentEnrollments.map(e => ({
+      enrollment_id: e.enrollment_id,
+      academic_year_id: e.academic_year_id,
+      year_be: repository.getYearBe(e.academic_year_id),
+      grade: e.grade,
+      room: e.room,
+      roll_no: e.roll_no
+    }));
+
     const profile = {
       student_uid: student.student_uid,
       display_name: student.display_name,
@@ -39,7 +62,8 @@ const StudentService = {
       room: enrollment ? enrollment.room : null,
       roll_no: enrollment ? enrollment.roll_no : null,
       is_out_of_roster: isOutOfRoster,
-      enrollment_status: enrollment ? enrollment.status : "out_of_roster"
+      enrollment_status: enrollment ? enrollment.status : "out_of_roster",
+      available_enrollments: availableEnrollments
     };
 
     // Find published syllabus
@@ -96,8 +120,9 @@ const StudentService = {
     // Build Worksheet Cards
     const worksheetStatuses = [];
     const worksheetCards = (syllabus.worksheets || []).map(ws => {
-      const submission = subMap.get(ws.code) || null;
-      const linkedTaskCodes = wsLinksMap.get(ws.code) || [];
+      const wsCode = ws.code || ws.worksheet_code;
+      const submission = subMap.get(wsCode) || null;
+      const linkedTaskCodes = wsLinksMap.get(wsCode) || ws.task_codes || [];
       const linkedTasks = linkedTaskCodes.map(code => taskMap.get(code)).filter(Boolean);
       
       const latestReview = submission ? repository.findLatestEvidenceReview(submission.submission_id) : null;
@@ -129,11 +154,16 @@ const StudentService = {
         };
       });
 
+      const orderNo = ws.order_no || (parseInt(String(wsCode).replace(/\D/g, ""), 10) || 1);
+      const sessionRange = (ws.session_start && ws.session_end) 
+        ? `${ws.session_start}-${ws.session_end}` 
+        : `${Math.max(1, (orderNo * 2) - 1)}-${Math.min(20, orderNo * 2)}`;
+
       return {
-        worksheet_code: ws.code,
-        title: ws.title,
-        order_no: ws.order_no,
-        session_range: `${ws.session_start}-${ws.session_end}`,
+        worksheet_code: wsCode,
+        title: ws.title || `ใบงานที่ ${orderNo}`,
+        order_no: orderNo,
+        session_range: sessionRange,
         due_at: ws.due_at,
         main_status: statusResult.main_status,
         status_label_th: statusResult.status_label_th,

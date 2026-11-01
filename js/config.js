@@ -12,10 +12,13 @@ const CONFIG = {
   DATABASE_SPREADSHEET_ID: "1w3EQQfI2cK9-fmfLzbn3vzaTd-V81JCTT8Hwa8WhiA0",
   DATABASE_DRIVE_FOLDER_ID: "1FKKFSYOfzwdRuehjG9Ha_6yoKbc4dMWs",
 
+  // Default Google Apps Script Web App Endpoint provided by User
+  DEFAULT_API_URL: "https://script.google.com/macros/s/AKfycbysnNcqRKRfg5CxPl0saQl-cM0MJS3I_3TNeadvhwh06nr5HwXcMkatkQn5vnVhexM/exec",
+
   // Google Apps Script Web App Endpoint
   // Stored in localStorage so the user can easily paste their deployed GAS Web App URL
   getApiUrl() {
-    return localStorage.getItem("PHT_GAS_WEBAPP_URL") || "";
+    return localStorage.getItem("PHT_GAS_WEBAPP_URL") || this.DEFAULT_API_URL;
   },
 
   setApiUrl(url) {

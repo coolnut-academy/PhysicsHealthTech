@@ -53,6 +53,1133 @@ function doGet(e) {
 }
 
 /**
+ * Helper to run directly from Google Apps Script editor dropdown:
+ * Run -> initializeDatabase
+ * Automatically creates all required database tabs and headers in Google Sheet
+ */
+function initializeDatabase() {
+  const spreadsheetId = AppConfig.getSpreadsheetId();
+  const res = SchemaMigrator.runMigration(spreadsheetId);
+  Logger.log("initializeDatabase result: " + JSON.stringify(res, null, 2));
+  return res;
+}
+
+/**
+ * Helper to run directly from Google Apps Script editor dropdown:
+ * Run -> seedSampleData
+ * Populates sample Teachers, Students, Enrollments, Academic Year, and Syllabus for quick testing.
+ */
+function seedSampleData() {
+  const spreadsheetId = AppConfig.getSpreadsheetId();
+  if (typeof SpreadsheetApp === "undefined") {
+    return { ok: false, message: "Non-GAS environment" };
+  }
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  
+  // 1. Teachers
+  const tchSheet = ss.getSheetByName("Teachers");
+  if (tchSheet) {
+    const existing = tchSheet.getDataRange().getValues();
+    const hasTch1 = existing.some(r => r[6] === "TeacherAuthSecret#1001");
+    if (!hasTch1) {
+      tchSheet.appendRow(["tch_001", "", "teacher.physics@school.ac.th", "อาจารย์ ดร.สมศักดิ์ รักวิทยา", "teacher", "active", "TeacherAuthSecret#1001", new Date().toISOString()]);
+    }
+    const hasAdmin = existing.some(r => r[6] === "AdminAuthSecret#9999");
+    if (!hasAdmin) {
+      tchSheet.appendRow(["tch_admin", "", "admin.physics@school.ac.th", "อาจารย์ นพพร หัวหน้าหมวด", "admin", "active", "AdminAuthSecret#9999", new Date().toISOString()]);
+    }
+  }
+
+  // 2. Academic Years
+  const yrSheet = ss.getSheetByName("AcademicYears");
+  if (yrSheet) {
+    const existing = yrSheet.getDataRange().getValues();
+    const hasYr = existing.some(r => r[0] === "yr_2570");
+    if (!hasYr) {
+      yrSheet.appendRow(["yr_2570", 2570, "open", "op_seed", new Date().toISOString(), new Date().toISOString(), 1]);
+    }
+  }
+
+  // 3. Students & Credentials
+  const stdSheet = ss.getSheetByName("Students");
+  const credSheet = ss.getSheetByName("StudentCredentials");
+  if (stdSheet && credSheet) {
+    const existingStd = stdSheet.getDataRange().getValues();
+    const sampleStudents = [
+      { uid: "std_00007", code: "00007", name: "นายสมชาย มั่นใจ", secret: "PhtSecret#00007A" },
+      { uid: "std_00123", code: "00123", name: "น.ส.สมหญิง ชำนาญคิด", secret: "PhtSecret#00123B" },
+      { uid: "std_91234", code: "91234", name: "น.ส.พัชรา วิทยาการ", secret: "PhtSecret#91234D" }
+    ];
+
+    for (const s of sampleStudents) {
+      const exists = existingStd.some(r => String(r[1]).replace(/^'/, "") === s.code);
+      if (!exists) {
+        stdSheet.appendRow([s.uid, "'" + s.code, s.name, "active", 1, new Date().toISOString(), new Date().toISOString(), ""]);
+        // Passwordless student login: leave StudentCredentials empty so students log in with 5-digit code alone
+      }
+    }
+  }
+
+  // 4. Enrollments
+  const enrSheet = ss.getSheetByName("Enrollments");
+  if (enrSheet) {
+    const existingEnr = enrSheet.getDataRange().getValues();
+    const sampleEnrollments = [
+      ["enr_001", "yr_2570", "std_00007", "M4", "1", 1, "active", new Date().toISOString()],
+      ["enr_002", "yr_2570", "std_00123", "M4", "1", 2, "active", new Date().toISOString()],
+      ["enr_003", "yr_2570", "std_91234", "M5", "2", 1, "active", new Date().toISOString()]
+    ];
+    for (const e of sampleEnrollments) {
+      if (!existingEnr.some(r => r[0] === e[0])) {
+        enrSheet.appendRow(e);
+      }
+    }
+  }
+
+  // 5. Syllabi & Tasks
+  const sylSheet = ss.getSheetByName("SyllabusVersions");
+  const taskSheet = ss.getSheetByName("TaskDefinitions");
+  const linkSheet = ss.getSheetByName("WorksheetTaskLinks");
+  if (sylSheet && taskSheet && linkSheet) {
+    const existingSyl = sylSheet.getDataRange().getValues();
+    if (!existingSyl.some(r => r[0] === "syl_m4_2570_v1")) {
+      sylSheet.appendRow(["syl_m4_2570_v1", "yr_2570", "M4", 1, 10000, 20, 100, "published", new Date().toISOString()]);
+
+      const m4Tasks = [
+        ["task_m4_T4-01", "syl_m4_2570_v1", "T4-01", "ใบงานที่ 1: การวัดและเลขนัยสำคัญทางชีวกลศาสตร์", 1000, "individual_only", "{}", true, 1],
+        ["task_m4_T4-02", "syl_m4_2570_v1", "T4-02", "ใบงานที่ 2: การเคลื่อนที่แนวตรงของระบบกล้ามเนื้อและข้อต่อ", 1000, "individual_only", "{}", true, 2],
+        ["task_m4_T4-03", "syl_m4_2570_v1", "T4-03", "ใบงานที่ 3: แรงและกฎการเคลื่อนที่ของนิวตันในกายภาพบำบัด", 1000, "individual_only", "{}", true, 3],
+        ["task_m4_T4-04", "syl_m4_2570_v1", "T4-04", "ใบงานที่ 4: สมดุลกลและการทรงตัวของกระดูกสันหลัง", 1000, "individual_only", "{}", true, 4],
+        ["task_m4_T4-05", "syl_m4_2570_v1", "T4-05", "ใบงานที่ 5: งาน พลังงาน และการเผาผลาญในร่างกายมนุษย์", 1000, "individual_only", "{}", true, 5],
+        ["task_m4_T4-06", "syl_m4_2570_v1", "T4-06", "ใบงานที่ 6: โมเมนตัมและการชนในการบาดเจ็บทางกีฬา", 1000, "individual_only", "{}", true, 6],
+        ["task_m4_T4-07", "syl_m4_2570_v1", "T4-07", "ใบงานที่ 7: การเคลื่อนที่แบบโพรเจกไทล์และการเคลื่อนที่แบบวงกลม", 1000, "individual_only", "{}", true, 7],
+        ["task_m4_T4-08", "syl_m4_2570_v1", "T4-08", "ใบงานที่ 8: การเคลื่อนที่แบบฮาร์มอนิกอย่างง่ายและการสั่นสะเทือน", 1000, "individual_only", "{}", true, 8],
+        ["task_m4_T4-09", "syl_m4_2570_v1", "T4-09", "ใบงานที่ 9: โครงงานประยุกต์ฟิสิกส์สุขภาพและการนำเสนอชิ้นงาน", 2000, "group_individual_hybrid", JSON.stringify({ shared_max: 1000, individual_max: 1000 }), true, 9]
+      ];
+
+      for (const t of m4Tasks) {
+        taskSheet.appendRow(t);
+      }
+
+      for (let i = 1; i <= 9; i++) {
+        linkSheet.appendRow([`link_m4_${i}`, "syl_m4_2570_v1", `PHT4-W0${i}`, `T4-0${i}`, i]);
+      }
+    }
+
+    if (!existingSyl.some(r => r[0] === "syl_m5_2570_v1")) {
+      sylSheet.appendRow(["syl_m5_2570_v1", "yr_2570", "M5", 1, 10000, 20, 100, "published", new Date().toISOString()]);
+
+      const m5Tasks = [
+        ["task_m5_T5-01", "syl_m5_2570_v1", "T5-01", "ใบงานที่ 1: ของไหลและความดันโลหิตในระบบไหลเวียน", 1000, "individual_only", "{}", true, 1],
+        ["task_m5_T5-02", "syl_m5_2570_v1", "T5-02", "ใบงานที่ 2: อุณหพลศาสตร์และการควบคุมอุณหภูมิร่างกาย", 1000, "individual_only", "{}", true, 2],
+        ["task_m5_T5-03", "syl_m5_2570_v1", "T5-03", "ใบงานที่ 3: คลื่นเสียงและการตรวจวินิจฉัยด้วยอัลตราซาวด์", 1000, "individual_only", "{}", true, 3],
+        ["task_m5_T5-04", "syl_m5_2570_v1", "T5-04", "ใบงานที่ 4: แสงเชิงเรขาคณิต เลนส์สายตา และการมองเห็น", 1000, "individual_only", "{}", true, 4],
+        ["task_m5_T5-05", "syl_m5_2570_v1", "T5-05", "ใบงานที่ 5: ไฟฟ้าสถิตและศักย์ไฟฟ้าเยื่อหุ้มเซลล์", 1000, "individual_only", "{}", true, 5],
+        ["task_m5_T5-06", "syl_m5_2570_v1", "T5-06", "ใบงานที่ 6: ไฟฟ้ากระแสตรงและการทำงานของคลื่นไฟฟ้าหัวใจ (ECG)", 1000, "individual_only", "{}", true, 6],
+        ["task_m5_T5-07", "syl_m5_2570_v1", "T5-07", "ใบงานที่ 7: แม่เหล็กไฟฟ้าและการสร้างภาพด้วยสนามแม่เหล็ก (MRI)", 1000, "individual_only", "{}", true, 7],
+        ["task_m5_T5-08", "syl_m5_2570_v1", "T5-08", "ใบงานที่ 8: รังสี เอกซเรย์ และความปลอดภัยทางรังสีวิทยา", 1000, "individual_only", "{}", true, 8],
+        ["task_m5_T5-09", "syl_m5_2570_v1", "T5-09", "ใบงานที่ 9: นวัตกรรมสิ่งประดิษฐ์ฟิสิกส์สุขภาพและการนำเสนอโครงงาน", 2000, "group_individual_hybrid", JSON.stringify({ shared_max: 1000, individual_max: 1000 }), true, 9]
+      ];
+
+      for (const t of m5Tasks) {
+        taskSheet.appendRow(t);
+      }
+
+      for (let i = 1; i <= 9; i++) {
+        linkSheet.appendRow([`link_m5_${i}`, "syl_m5_2570_v1", `PHT5-W0${i}`, `T5-0${i}`, i]);
+      }
+    }
+  }
+
+  Logger.log("seedSampleData completed successfully!");
+  return { ok: true, message: "Sample data seeded successfully." };
+}
+
+/**
+ * One-Click Importer for Official Student Roster (Academic Year 2569)
+ * Imports 30 students (M.4) and 27 students (M.5) directly into Google Sheets.
+ * Run directly from Google Apps Script editor:
+ * Run -> importOfficialRoster2569
+ */
+function importOfficialRoster2569() {
+  const spreadsheetId = AppConfig.getSpreadsheetId();
+  if (typeof SpreadsheetApp === "undefined") {
+    return { ok: false, message: "Non-GAS environment" };
+  }
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+
+  // 1. Academic Year 2569
+  const yrSheet = ss.getSheetByName("AcademicYears");
+  if (yrSheet) {
+    const existing = yrSheet.getDataRange().getValues();
+    if (!existing.some(r => r[0] === "yr_2569")) {
+      yrSheet.appendRow(["yr_2569", 2569, "open", "op_official_2569", new Date().toISOString(), new Date().toISOString(), 1]);
+    }
+  }
+
+  // 2. Syllabi & Tasks for M.4 and M.5 (Year 2569)
+  const sylSheet = ss.getSheetByName("SyllabusVersions");
+  const taskSheet = ss.getSheetByName("TaskDefinitions");
+  const linkSheet = ss.getSheetByName("WorksheetTaskLinks");
+  if (sylSheet && taskSheet && linkSheet) {
+    const existingSyl = sylSheet.getDataRange().getValues();
+    
+    // M.4 Syllabus (2569)
+    if (!existingSyl.some(r => r[0] === "syl_m4_2569_v1")) {
+      sylSheet.appendRow(["syl_m4_2569_v1", "yr_2569", "M4", 1, 10000, 20, 100, "published", new Date().toISOString()]);
+      const m4Tasks = [
+        ["task_m4_2569_T4-01", "syl_m4_2569_v1", "T4-01", "ใบงานที่ 1: การวัดและเลขนัยสำคัญทางชีวกลศาสตร์", 1000, "individual_only", "{}", true, 1],
+        ["task_m4_2569_T4-02", "syl_m4_2569_v1", "T4-02", "ใบงานที่ 2: การเคลื่อนที่แนวตรงของระบบกล้ามเนื้อและข้อต่อ", 1000, "individual_only", "{}", true, 2],
+        ["task_m4_2569_T4-03", "syl_m4_2569_v1", "T4-03", "ใบงานที่ 3: แรงและกฎการเคลื่อนที่ของนิวตันในกายภาพบำบัด", 1000, "individual_only", "{}", true, 3],
+        ["task_m4_2569_T4-04", "syl_m4_2569_v1", "T4-04", "ใบงานที่ 4: สมดุลกลและการทรงตัวของกระดูกสันหลัง", 1000, "individual_only", "{}", true, 4],
+        ["task_m4_2569_T4-05", "syl_m4_2569_v1", "T4-05", "ใบงานที่ 5: งาน พลังงาน และการเผาผลาญในร่างกายมนุษย์", 1000, "individual_only", "{}", true, 5],
+        ["task_m4_2569_T4-06", "syl_m4_2569_v1", "T4-06", "ใบงานที่ 6: โมเมนตัมและการชนในการบาดเจ็บทางกีฬา", 1000, "individual_only", "{}", true, 6],
+        ["task_m4_2569_T4-07", "syl_m4_2569_v1", "T4-07", "ใบงานที่ 7: การเคลื่อนที่แบบโพรเจกไทล์และการเคลื่อนที่แบบวงกลม", 1000, "individual_only", "{}", true, 7],
+        ["task_m4_2569_T4-08", "syl_m4_2569_v1", "T4-08", "ใบงานที่ 8: การเคลื่อนที่แบบฮาร์มอนิกอย่างง่ายและการสั่นสะเทือน", 1000, "individual_only", "{}", true, 8],
+        ["task_m4_2569_T4-09", "syl_m4_2569_v1", "T4-09", "ใบงานที่ 9: โครงงานประยุกต์ฟิสิกส์สุขภาพและการนำเสนอชิ้นงาน", 2000, "group_individual_hybrid", JSON.stringify({ shared_max: 1000, individual_max: 1000 }), true, 9]
+      ];
+      m4Tasks.forEach(t => taskSheet.appendRow(t));
+      for (let i = 1; i <= 9; i++) {
+        linkSheet.appendRow([`link_m4_2569_${i}`, "syl_m4_2569_v1", `PHT4-W0${i}`, `T4-0${i}`, i]);
+      }
+    }
+
+    // M.5 Syllabus (2569)
+    if (!existingSyl.some(r => r[0] === "syl_m5_2569_v1")) {
+      sylSheet.appendRow(["syl_m5_2569_v1", "yr_2569", "M5", 1, 10000, 20, 100, "published", new Date().toISOString()]);
+      const m5Tasks = [
+        ["task_m5_2569_T5-01", "syl_m5_2569_v1", "T5-01", "ใบงานที่ 1: ของไหลและความดันโลหิตในระบบไหลเวียน", 1000, "individual_only", "{}", true, 1],
+        ["task_m5_2569_T5-02", "syl_m5_2569_v1", "T5-02", "ใบงานที่ 2: อุณหพลศาสตร์และการควบคุมอุณหภูมิร่างกาย", 1000, "individual_only", "{}", true, 2],
+        ["task_m5_2569_T5-03", "syl_m5_2569_v1", "T5-03", "ใบงานที่ 3: คลื่นเสียงและการตรวจวินิจฉัยด้วยอัลตราซาวด์", 1000, "individual_only", "{}", true, 3],
+        ["task_m5_2569_T5-04", "syl_m5_2569_v1", "T5-04", "ใบงานที่ 4: แสงเชิงเรขาคณิต เลนส์สายตา และการมองเห็น", 1000, "individual_only", "{}", true, 4],
+        ["task_m5_2569_T5-05", "syl_m5_2569_v1", "T5-05", "ใบงานที่ 5: ไฟฟ้าสถิตและศักย์ไฟฟ้าเยื่อหุ้มเซลล์", 1000, "individual_only", "{}", true, 5],
+        ["task_m5_2569_T5-06", "syl_m5_2569_v1", "T5-06", "ใบงานที่ 6: ไฟฟ้ากระแสตรงและการทำงานของคลื่นไฟฟ้าหัวใจ (ECG)", 1000, "individual_only", "{}", true, 6],
+        ["task_m5_2569_T5-07", "syl_m5_2569_v1", "T5-07", "ใบงานที่ 7: แม่เหล็กไฟฟ้าและการสร้างภาพด้วยสนามแม่เหล็ก (MRI)", 1000, "individual_only", "{}", true, 7],
+        ["task_m5_2569_T5-08", "syl_m5_2569_v1", "T5-08", "ใบงานที่ 8: รังสี เอกซเรย์ และความปลอดภัยทางรังสีวิทยา", 1000, "individual_only", "{}", true, 8],
+        ["task_m5_2569_T5-09", "syl_m5_2569_v1", "T5-09", "ใบงานที่ 9: นวัตกรรมสิ่งประดิษฐ์ฟิสิกส์สุขภาพและการนำเสนอโครงงาน", 2000, "group_individual_hybrid", JSON.stringify({ shared_max: 1000, individual_max: 1000 }), true, 9]
+      ];
+      m5Tasks.forEach(t => taskSheet.appendRow(t));
+      for (let i = 1; i <= 9; i++) {
+        linkSheet.appendRow([`link_m5_2569_${i}`, "syl_m5_2569_v1", `PHT5-W0${i}`, `T5-0${i}`, i]);
+      }
+    }
+  }
+
+  // 3. Teachers
+  const tchSheet = ss.getSheetByName("Teachers");
+  if (tchSheet) {
+    const existing = tchSheet.getDataRange().getValues();
+    if (!existing.some(r => r[6] === "TeacherAuthSecret#1001")) {
+      tchSheet.appendRow(["tch_001", "", "teacher.physics@school.ac.th", "อาจารย์ ดร.สมศักดิ์ รักวิทยา", "teacher", "active", "TeacherAuthSecret#1001", new Date().toISOString()]);
+    }
+    if (!existing.some(r => r[6] === "AdminAuthSecret#9999")) {
+      tchSheet.appendRow(["tch_admin", "", "admin.physics@school.ac.th", "อาจารย์ นพพร หัวหน้าหมวด", "admin", "active", "AdminAuthSecret#9999", new Date().toISOString()]);
+    }
+  }
+
+  // 4. Students (30 from M.4 + 27 from M.5)
+  const stdSheet = ss.getSheetByName("Students");
+  const officialStudents = [
+  {
+    "student_uid": "std_99999",
+    "code_5_digit": "99999",
+    "display_name": "นายทดสอบ ห้องวิทย์สุขภาพ",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17763",
+    "code_5_digit": "17763",
+    "display_name": "นายพิพัฒน์ จุลบุตร",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17808",
+    "code_5_digit": "17808",
+    "display_name": "นายอโณทัย จรัญไชยกุล",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17837",
+    "code_5_digit": "17837",
+    "display_name": "นายชัชพงษ์ ไชยา",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17875",
+    "code_5_digit": "17875",
+    "display_name": "นายกฤตนันท์ กมลดีเยี่ยม",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17997",
+    "code_5_digit": "17997",
+    "display_name": "นายธำรงวิทย์ สกุลแก้วทิพย์",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_19447",
+    "code_5_digit": "19447",
+    "display_name": "นายวิธวินท์ วารุณรัตนกร",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17779",
+    "code_5_digit": "17779",
+    "display_name": "นางสาวพนิดา นันทภัทร",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17780",
+    "code_5_digit": "17780",
+    "display_name": "นางสาวพรรณภัทร ภู่ตระกูล",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17784",
+    "code_5_digit": "17784",
+    "display_name": "นางสาวพีชญา สุธรรม",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17789",
+    "code_5_digit": "17789",
+    "display_name": "นางสาวสุวพิชชา บุญโญรส",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17790",
+    "code_5_digit": "17790",
+    "display_name": "นางสาวหน่อคริเฮ่ตา",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17810",
+    "code_5_digit": "17810",
+    "display_name": "นางสาวกันย์สินี ศรีชัยสถาน",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17813",
+    "code_5_digit": "17813",
+    "display_name": "นางสาวชมพูนุช เมธาธารณ์กุล",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17814",
+    "code_5_digit": "17814",
+    "display_name": "นางสาวชุติกาญจน์ ทองประดิษฐ์",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17817",
+    "code_5_digit": "17817",
+    "display_name": "นางสาวณัฐาวีรนุช เมืองเมา",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17826",
+    "code_5_digit": "17826",
+    "display_name": "เด็กหญิงลักษิกา ถาวร",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17827",
+    "code_5_digit": "17827",
+    "display_name": "นางสาววันเพ็ญ แว่นมรกต",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17832",
+    "code_5_digit": "17832",
+    "display_name": "นางสาวเกวลี ไพรสรรเสริญ",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17858",
+    "code_5_digit": "17858",
+    "display_name": "นางสาวชุติมา ธรรมเกิดสุข",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17860",
+    "code_5_digit": "17860",
+    "display_name": "นางสาวณัฐกฤตา มิ่งขวัญ",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17869",
+    "code_5_digit": "17869",
+    "display_name": "เด็กหญิงพิชญ์สินี วงศ์อรฉัตร",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17900",
+    "code_5_digit": "17900",
+    "display_name": "นางสาวณัฐกมล ทาลาว",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17947",
+    "code_5_digit": "17947",
+    "display_name": "นางสาวพิชญา พนมไพร",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17979",
+    "code_5_digit": "17979",
+    "display_name": "นางสาวกาญจนา ไกรเกริกเกียรติ",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17983",
+    "code_5_digit": "17983",
+    "display_name": "นางสาวนฐพร จุลบุตร",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_18058",
+    "code_5_digit": "18058",
+    "display_name": "นางสาวฐิติมา คำนวณพนม",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_18680",
+    "code_5_digit": "18680",
+    "display_name": "นางสาวฟ้าใส มุ่งศรีโสภณ",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_19448",
+    "code_5_digit": "19448",
+    "display_name": "นางสาวมนต์นภา ปัทมชัยกุล",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_19449",
+    "code_5_digit": "19449",
+    "display_name": "นางสาวธัญนิศญาน์ หว่างไม",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_19450",
+    "code_5_digit": "19450",
+    "display_name": "เด็กหญิงแสงดาว เรืองแก้วนพเก้า",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17388",
+    "code_5_digit": "17388",
+    "display_name": "นายพิตติพันท์ ปิยโชคนิธิสกุล",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17395",
+    "code_5_digit": "17395",
+    "display_name": "นายฐิติวัสส์ พัฒน์พงศ์สกุล",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17397",
+    "code_5_digit": "17397",
+    "display_name": "นายหาญหนุ่ม",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17539",
+    "code_5_digit": "17539",
+    "display_name": "นายณัฐวุฒิ เสรีธรรมพิทักษ์",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17581",
+    "code_5_digit": "17581",
+    "display_name": "นายพงษ์สิทธิ์ เลาซาง",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_18721",
+    "code_5_digit": "18721",
+    "display_name": "นายธีรศานต์ เชาว์พิกุล",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_18722",
+    "code_5_digit": "18722",
+    "display_name": "นายสุรนาท ศรีปัญญาเลิศ",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_18723",
+    "code_5_digit": "18723",
+    "display_name": "นายเทพรัตน์ โซพุทรา",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17405",
+    "code_5_digit": "17405",
+    "display_name": "นางสาวณัฐณิชา มงคล",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17411",
+    "code_5_digit": "17411",
+    "display_name": "นางสาวนิจวิภา พรานวิเวทย์",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17440",
+    "code_5_digit": "17440",
+    "display_name": "เด็กหญิงจันทร์ละวันดาว แซ่เจ๊า",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17441",
+    "code_5_digit": "17441",
+    "display_name": "นางสาวจิณห์ชนัณ สว่างธรรมศรี",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17458",
+    "code_5_digit": "17458",
+    "display_name": "เด็กหญิงลัลล์ลลิล สันติสุข",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17478",
+    "code_5_digit": "17478",
+    "display_name": "นางสาวกันภิรมย์ กองฤทธิ์",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17481",
+    "code_5_digit": "17481",
+    "display_name": "นางสาวจรรยพร พนมไพร",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17482",
+    "code_5_digit": "17482",
+    "display_name": "นางสาวซากุระ หว่างป่อ",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17495",
+    "code_5_digit": "17495",
+    "display_name": "นางสาววรัญรักษ์ นิยมวงษ์",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17498",
+    "code_5_digit": "17498",
+    "display_name": "นางสาวอังคณา ธนโชติหิรัญวงศ์",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17520",
+    "code_5_digit": "17520",
+    "display_name": "นางสาวกุลนัดดา จิโน",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17522",
+    "code_5_digit": "17522",
+    "display_name": "นางสาวณัฐวดี วรรณโชติโยธิน",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17532",
+    "code_5_digit": "17532",
+    "display_name": "นางสาวอัยยา มั่นคง",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17598",
+    "code_5_digit": "17598",
+    "display_name": "นางสาวแพรวดาว สร้อยคำ",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17626",
+    "code_5_digit": "17626",
+    "display_name": "นางสาวนาริรัตน์ สิงขรสุกใส",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_17630",
+    "code_5_digit": "17630",
+    "display_name": "นางสาววชิราภรณ์ ชวลิตทวีรัตน์",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_18725",
+    "code_5_digit": "18725",
+    "display_name": "นางสาวบัณฑิตา โกรกกลาง",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_18726",
+    "code_5_digit": "18726",
+    "display_name": "นางสาวพิชญา ไพรรุ่งเรือง",
+    "status": "active"
+  },
+  {
+    "student_uid": "std_19130",
+    "code_5_digit": "19130",
+    "display_name": "นางสาวมนัสนันท์ จันทร์แก้ว",
+    "status": "active"
+  }
+];
+  if (stdSheet) {
+    const existingStd = stdSheet.getDataRange().getValues();
+    for (const s of officialStudents) {
+      const exists = existingStd.some(r => String(r[1]).replace(/^'/, "") === s.code_5_digit);
+      if (!exists) {
+        stdSheet.appendRow([s.student_uid, "'" + s.code_5_digit, s.display_name, s.status, 1, new Date().toISOString(), "", ""]);
+      }
+    }
+  }
+
+  // 5. Enrollments
+  const enrSheet = ss.getSheetByName("Enrollments");
+  const officialEnrollments = [
+  {
+    "enrollment_id": "enr_m4_999",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_99999",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 99,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_001",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17763",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 1,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_002",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17808",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 2,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_003",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17837",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 3,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_004",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17875",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 4,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_005",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17997",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 5,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_006",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_19447",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 6,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_007",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17779",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 7,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_008",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17780",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 8,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_009",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17784",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 9,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_010",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17789",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 10,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_011",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17790",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 11,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_012",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17810",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 12,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_013",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17813",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 13,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_014",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17814",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 14,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_015",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17817",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 15,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_016",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17826",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 16,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_017",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17827",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 17,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_018",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17832",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 18,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_019",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17858",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 19,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_020",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17860",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 20,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_021",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17869",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 21,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_022",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17900",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 22,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_023",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17947",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 23,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_024",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17979",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 24,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_025",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17983",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 25,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_026",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_18058",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 26,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_027",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_18680",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 27,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_028",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_19448",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 28,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_029",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_19449",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 29,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m4_030",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_19450",
+    "grade": "M4",
+    "room": "1",
+    "roll_no": 30,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_001",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17388",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 1,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_002",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17395",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 2,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_003",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17397",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 3,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_004",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17539",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 4,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_005",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17581",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 5,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_006",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_18721",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 6,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_007",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_18722",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 7,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_008",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_18723",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 8,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_009",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17405",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 9,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_010",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17411",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 10,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_011",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17440",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 11,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_012",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17441",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 12,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_013",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17458",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 13,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_014",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17478",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 14,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_015",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17481",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 15,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_016",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17482",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 16,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_017",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17495",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 17,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_018",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17498",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 18,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_019",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17520",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 19,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_020",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17522",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 20,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_021",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17532",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 21,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_022",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17598",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 22,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_023",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17626",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 23,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_024",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_17630",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 24,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_025",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_18725",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 25,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_026",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_18726",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 26,
+    "status": "active"
+  },
+  {
+    "enrollment_id": "enr_m5_027",
+    "academic_year_id": "yr_2569",
+    "student_uid": "std_19130",
+    "grade": "M5",
+    "room": "1",
+    "roll_no": 27,
+    "status": "active"
+  }
+];
+  if (enrSheet) {
+    const existingEnr = enrSheet.getDataRange().getValues();
+    for (const e of officialEnrollments) {
+      const exists = existingEnr.some(r => r[0] === e.enrollment_id);
+      if (!exists) {
+        enrSheet.appendRow([e.enrollment_id, e.academic_year_id, e.student_uid, e.grade, e.room, e.roll_no, e.status, new Date().toISOString()]);
+      }
+    }
+  }
+
+  Logger.log("Successfully imported official roster 2569! (M.4: 30, M.5: 27)");
+  return { ok: true, message: "นำเข้ารายชื่อนักเรียน ม.4 (30 คน) และ ม.5 (27 คน) สำเร็จแล้ว!" };
+}
+
+/**
  * Handle HTTP POST Requests (from GitHub Pages or external API clients)
  * Expected payload: JSON string in postData.contents with standard envelope:
  * { action, request_id, session_token, payload }
@@ -265,6 +1392,11 @@ function api(request, injectedRepo = null) {
       return { ...res, request_id: requestId };
     }
 
+    if (action === "teacher.importRoster") {
+      const res = AcademicYearService.importRoster(session, payload, repo);
+      return { ...res, request_id: requestId };
+    }
+
     if (action === "teacher.validateSyllabus") {
       Authorization.enforceTeacher(session);
       const res = SyllabusService.validateSyllabusPackage(payload);
@@ -305,6 +1437,9 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     doGet,
     doPost,
-    api
+    api,
+    initializeDatabase,
+    seedSampleData,
+    importOfficialRoster2569
   };
 }

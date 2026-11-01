@@ -42,11 +42,126 @@ class SheetRepository {
     this.memoryStore.set(tableName, [...items]);
   }
 
+  loadFromGasSheet_(tableName) {
+    if (!this.isGasRuntime || !this.spreadsheetId) return [];
+    try {
+      const ss = SpreadsheetApp.openById(this.spreadsheetId);
+      const sheet = ss.getSheetByName(tableName);
+      if (!sheet) return [];
+      const data = sheet.getDataRange().getValues();
+      if (!data || data.length < 2) return [];
+      const headers = data[0];
+      const rows = [];
+      for (let r = 1; r < data.length; r++) {
+        const rowData = data[r];
+        if (!rowData || rowData.every(c => c === "" || c === null || c === undefined)) continue;
+        const rowObj = {};
+        for (let c = 0; c < headers.length; c++) {
+          const key = headers[c];
+          if (key) {
+            let val = rowData[c];
+            if (typeof val === "string") val = this.unescapeFormula(val);
+            rowObj[key] = val;
+          }
+        }
+        rowObj._rowNumber = r + 1;
+        rows.push(rowObj);
+      }
+      return rows;
+    } catch (e) {
+      if (typeof Logger !== "undefined") Logger.log("Error loading sheet " + tableName + ": " + e.message);
+      return [];
+    }
+  }
+
+  appendGasRow_(tableName, rowObj) {
+    if (!this.isGasRuntime || !this.spreadsheetId) return;
+    try {
+      const ss = SpreadsheetApp.openById(this.spreadsheetId);
+      const sheet = ss.getSheetByName(tableName);
+      if (!sheet) return;
+      const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
+      const rowValues = headers.map(h => {
+        let val = rowObj[h];
+        if (val === undefined || val === null) val = "";
+        return this.escapeFormula(val);
+      });
+      sheet.appendRow(rowValues);
+      rowObj._rowNumber = sheet.getLastRow();
+    } catch (e) {
+      if (typeof Logger !== "undefined") Logger.log("Error appending to " + tableName + ": " + e.message);
+    }
+  }
+
+  updateGasRow_(tableName, rowObj, rowNumber = null) {
+    if (!this.isGasRuntime || !this.spreadsheetId) return;
+    try {
+      const ss = SpreadsheetApp.openById(this.spreadsheetId);
+      const sheet = ss.getSheetByName(tableName);
+      if (!sheet) return;
+      const targetRow = rowNumber || rowObj._rowNumber;
+      if (!targetRow || targetRow < 2) {
+        this.appendGasRow_(tableName, rowObj);
+        return;
+      }
+      const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
+      const rowValues = headers.map(h => {
+        let val = rowObj[h];
+        if (val === undefined || val === null) val = "";
+        return this.escapeFormula(val);
+      });
+      sheet.getRange(targetRow, 1, 1, rowValues.length).setValues([rowValues]);
+    } catch (e) {
+      if (typeof Logger !== "undefined") Logger.log("Error updating row in " + tableName + ": " + e.message);
+    }
+  }
+
+  deleteGasRow_(tableName, rowNumber) {
+    if (!this.isGasRuntime || !this.spreadsheetId || !rowNumber) return;
+    try {
+      const ss = SpreadsheetApp.openById(this.spreadsheetId);
+      const sheet = ss.getSheetByName(tableName);
+      if (!sheet) return;
+      sheet.deleteRow(rowNumber);
+    } catch (e) {
+      if (typeof Logger !== "undefined") Logger.log("Error deleting row in " + tableName + ": " + e.message);
+    }
+  }
+
   getTable(tableName) {
     if (!this.memoryStore.has(tableName)) {
-      this.memoryStore.set(tableName, []);
+      if (this.isGasRuntime) {
+        this.memoryStore.set(tableName, this.loadFromGasSheet_(tableName));
+      } else {
+        this.memoryStore.set(tableName, []);
+      }
     }
     return this.memoryStore.get(tableName);
+  }
+
+  appendRowToTable(tableName, obj) {
+    const table = this.getTable(tableName);
+    table.push(obj);
+    if (this.isGasRuntime) {
+      this.appendGasRow_(tableName, obj);
+    }
+  }
+
+  upsertRowInTable(tableName, predicate, obj) {
+    const table = this.getTable(tableName);
+    const idx = table.findIndex(predicate);
+    if (idx >= 0) {
+      const existing = table[idx];
+      table[idx] = { ...existing, ...obj };
+      if (this.isGasRuntime) {
+        this.updateGasRow_(tableName, table[idx], existing._rowNumber);
+      }
+    } else {
+      table.push(obj);
+      if (this.isGasRuntime) {
+        this.appendGasRow_(tableName, obj);
+      }
+    }
   }
 
   // --- Universal Repository Methods ---
@@ -59,6 +174,14 @@ class SheetRepository {
   findStudentByUid(studentUid) {
     const table = this.getTable("Students");
     return table.find(s => s.student_uid === studentUid && !s.deleted_at);
+  }
+
+  saveStudent(student) {
+    this.upsertRowInTable("Students", s => s.student_uid === student.student_uid, student);
+  }
+
+  saveEnrollment(enrollment) {
+    this.upsertRowInTable("Enrollments", e => e.enrollment_id === enrollment.enrollment_id, enrollment);
   }
 
   findStudentCredential(studentUid) {
@@ -82,8 +205,7 @@ class SheetRepository {
   }
 
   recordLoginAttempt(attempt) {
-    const table = this.getTable("LoginAttempts");
-    table.push({ ...attempt });
+    this.appendRowToTable("LoginAttempts", { ...attempt });
   }
 
   findLoginAttempts(accountKeyHash) {
@@ -92,8 +214,7 @@ class SheetRepository {
   }
 
   saveSession(session) {
-    const table = this.getTable("Sessions");
-    table.push({ ...session });
+    this.appendRowToTable("Sessions", { ...session });
   }
 
   findSessionByTokenHash(tokenHash) {
@@ -102,11 +223,7 @@ class SheetRepository {
   }
 
   updateSession(session) {
-    const table = this.getTable("Sessions");
-    const idx = table.findIndex(s => s.session_id === session.session_id);
-    if (idx >= 0) {
-      table[idx] = { ...session };
-    }
+    this.upsertRowInTable("Sessions", s => s.session_id === session.session_id, session);
   }
 
   findActiveEnrollment(studentUid, academicYearId, grade) {
@@ -120,11 +237,11 @@ class SheetRepository {
   }
 
   findEnrollments(academicYearId, grade, room) {
-    const table = this.getTable("Enrollments");
+    const table = this.getTable("Enrollments") || [];
     return table.filter(e => {
       const matchYear = e.academic_year_id === academicYearId;
       const matchGrade = e.grade === grade;
-      const matchRoom = (!room || room === "all") ? true : (e.room === room);
+      const matchRoom = (!room || room === "all") ? true : (String(e.room) === String(room));
       return matchYear && matchGrade && matchRoom && e.status === "active";
     });
   }
@@ -144,24 +261,19 @@ class SheetRepository {
   }
 
   saveAcademicYear(year) {
-    const table = this.getTable("AcademicYears");
-    table.push({ ...year });
+    this.appendRowToTable("AcademicYears", { ...year });
   }
 
   updateAcademicYear(year) {
-    const table = this.getTable("AcademicYears");
-    const idx = table.findIndex(y => y.academic_year_id === year.academic_year_id);
-    if (idx >= 0) table[idx] = { ...year };
+    this.upsertRowInTable("AcademicYears", y => y.academic_year_id === year.academic_year_id, year);
   }
 
   saveGradeWorkspace(ws) {
-    const table = this.getTable("GradeWorkspaces");
-    table.push({ ...ws });
+    this.appendRowToTable("GradeWorkspaces", { ...ws });
   }
 
   saveAssignment(asg) {
-    const table = this.getTable("Assignments");
-    table.push({ ...asg });
+    this.appendRowToTable("Assignments", { ...asg });
   }
 
   getYearBe(academicYearId) {
@@ -170,17 +282,67 @@ class SheetRepository {
   }
 
   findPublishedSyllabus(academicYearId, grade) {
-    const table = this.getTable("SyllabusVersions");
-    return table.find(s => s.academic_year_id === academicYearId && s.grade === grade && s.state === "published");
+    const table = this.getTable("SyllabusVersions") || [];
+    const syl = table.find(s => s.academic_year_id === academicYearId && s.grade === grade && s.state === "published");
+    if (!syl) return null;
+
+    const tasksTable = this.getTable("TaskDefinitions") || [];
+    const tasks = (syl.tasks && syl.tasks.length > 0)
+      ? syl.tasks
+      : tasksTable.filter(t => t.syllabus_version_id === syl.syllabus_version_id);
+    tasks.sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0));
+
+    const linksTable = this.getTable("WorksheetTaskLinks") || [];
+    const links = (syl.links && syl.links.length > 0)
+      ? syl.links
+      : linksTable.filter(l => l.syllabus_version_id === syl.syllabus_version_id);
+    links.sort((a, b) => (Number(a.display_order) || 0) - (Number(b.display_order) || 0));
+
+    let worksheets = syl.worksheets;
+    if (!worksheets || worksheets.length === 0) {
+      const assignmentsTable = this.getTable("Assignments") || [];
+      const asgForGrade = assignmentsTable.filter(a => a.academic_year_id === syl.academic_year_id && a.grade === syl.grade);
+
+      const wsMap = new Map();
+      links.forEach(l => {
+        if (!wsMap.has(l.worksheet_code)) {
+          const asg = asgForGrade.find(a => a.worksheet_code === l.worksheet_code);
+          const order = asg ? asg.order_no : (parseInt(String(l.worksheet_code).replace(/\D/g, ""), 10) || 1);
+          wsMap.set(l.worksheet_code, {
+            code: l.worksheet_code,
+            worksheet_code: l.worksheet_code,
+            title: asg ? asg.title : `ใบงานที่ ${order}`,
+            order_no: order,
+            session_start: asg ? asg.session_start : Math.max(1, (order * 2) - 1),
+            session_end: asg ? asg.session_end : Math.min(20, order * 2),
+            due_at: asg ? asg.due_at : null,
+            task_codes: [l.task_code]
+          });
+        } else {
+          wsMap.get(l.worksheet_code).task_codes.push(l.task_code);
+        }
+      });
+      worksheets = Array.from(wsMap.values());
+    }
+
+    return {
+      ...syl,
+      tasks,
+      links,
+      worksheets
+    };
   }
 
   savePublishedSyllabus(syllabus) {
-    const table = this.getTable("SyllabusVersions");
-    table.push({ ...syllabus });
+    this.appendRowToTable("SyllabusVersions", { ...syllabus });
   }
 
   findTaskByCode(syllabusVersionId, taskCode) {
-    const syllabus = this.getTable("SyllabusVersions").find(s => s.syllabus_version_id === syllabusVersionId);
+    const tasksTable = this.getTable("TaskDefinitions") || [];
+    const fromTasks = tasksTable.find(t => t.syllabus_version_id === syllabusVersionId && t.task_code === taskCode);
+    if (fromTasks) return fromTasks;
+
+    const syllabus = (this.getTable("SyllabusVersions") || []).find(s => s.syllabus_version_id === syllabusVersionId);
     if (!syllabus || !syllabus.tasks) return null;
     return syllabus.tasks.find(t => t.task_code === taskCode);
   }
@@ -201,34 +363,27 @@ class SheetRepository {
   }
 
   saveGradeDraft(draft) {
-    const table = this.getTable("GradeDrafts");
-    const idx = table.findIndex(d => d.student_uid === draft.student_uid && d.syllabus_version_id === draft.syllabus_version_id && d.task_code === draft.task_code);
-    if (idx >= 0) {
-      table[idx] = { ...draft };
-    } else {
-      table.push({ ...draft });
-    }
+    this.upsertRowInTable("GradeDrafts", d => d.student_uid === draft.student_uid && d.syllabus_version_id === draft.syllabus_version_id && d.task_code === draft.task_code, draft);
   }
 
   deleteGradeDraft(studentUid, syllabusVersionId, taskCode) {
     const table = this.getTable("GradeDrafts");
     const idx = table.findIndex(d => d.student_uid === studentUid && d.syllabus_version_id === syllabusVersionId && d.task_code === taskCode);
-    if (idx >= 0) table.splice(idx, 1);
-  }
-
-  saveGradeEntry(entry) {
-    const table = this.getTable("GradeEntries");
-    const idx = table.findIndex(e => e.student_uid === entry.student_uid && e.syllabus_version_id === entry.syllabus_version_id && e.task_code === entry.task_code);
     if (idx >= 0) {
-      table[idx] = { ...entry };
-    } else {
-      table.push({ ...entry });
+      const rowNum = table[idx]._rowNumber;
+      table.splice(idx, 1);
+      if (this.isGasRuntime && rowNum) {
+        this.deleteGasRow_("GradeDrafts", rowNum);
+      }
     }
   }
 
+  saveGradeEntry(entry) {
+    this.upsertRowInTable("GradeEntries", e => e.student_uid === entry.student_uid && e.syllabus_version_id === entry.syllabus_version_id && e.task_code === entry.task_code, entry);
+  }
+
   saveGradeRevision(revision) {
-    const table = this.getTable("GradeRevisions");
-    table.push({ ...revision });
+    this.appendRowToTable("GradeRevisions", { ...revision });
   }
 
   findGradeHistoryForStudent(studentUid, taskCode, syllabusVersionId) {
@@ -248,8 +403,7 @@ class SheetRepository {
   }
 
   saveBonusAward(bonus) {
-    const table = this.getTable("BonusAwards");
-    table.push({ ...bonus });
+    this.appendRowToTable("BonusAwards", { ...bonus });
   }
 
   findSubmissionsForStudent(studentUid, academicYearId, grade) {
@@ -274,13 +428,7 @@ class SheetRepository {
   }
 
   saveSubmission(submission) {
-    const table = this.getTable("Submissions");
-    const idx = table.findIndex(s => s.submission_id === submission.submission_id);
-    if (idx >= 0) {
-      table[idx] = { ...submission };
-    } else {
-      table.push({ ...submission });
-    }
+    this.upsertRowInTable("Submissions", s => s.submission_id === submission.submission_id, submission);
   }
 
   findSubmissionVersions(submissionId) {
@@ -295,8 +443,7 @@ class SheetRepository {
   }
 
   saveSubmissionVersion(version) {
-    const table = this.getTable("SubmissionVersions");
-    table.push({ ...version });
+    this.appendRowToTable("SubmissionVersions", { ...version });
   }
 
   findLatestEvidenceReview(submissionId) {
@@ -312,8 +459,7 @@ class SheetRepository {
   }
 
   saveEvidenceReview(review) {
-    const table = this.getTable("EvidenceReviews");
-    table.push({ ...review });
+    this.appendRowToTable("EvidenceReviews", { ...review });
   }
 
   findOutOfRosterSubmissions(academicYearId, grade) {
@@ -322,8 +468,7 @@ class SheetRepository {
   }
 
   saveOperation(op) {
-    const table = this.getTable("Operations");
-    table.push({ ...op });
+    this.appendRowToTable("Operations", { ...op });
   }
 
   findOperation(opId) {
@@ -332,14 +477,11 @@ class SheetRepository {
   }
 
   updateOperation(op) {
-    const table = this.getTable("Operations");
-    const idx = table.findIndex(o => o.operation_id === op.operation_id);
-    if (idx >= 0) table[idx] = { ...op };
+    this.upsertRowInTable("Operations", o => o.operation_id === op.operation_id, op);
   }
 
   saveStagedFile(file) {
-    const table = this.getTable("SubmissionFiles");
-    table.push({ ...file });
+    this.appendRowToTable("SubmissionFiles", { ...file });
   }
 
   findStagedFilesByOpId(opId) {
@@ -348,9 +490,7 @@ class SheetRepository {
   }
 
   updateStagedFile(file) {
-    const table = this.getTable("SubmissionFiles");
-    const idx = table.findIndex(f => f.evidence_id === file.evidence_id);
-    if (idx >= 0) table[idx] = { ...file };
+    this.upsertRowInTable("SubmissionFiles", f => f.evidence_id === file.evidence_id, file);
   }
 
   findFileByEvidenceId(evidenceId) {
@@ -364,8 +504,19 @@ class SheetRepository {
   }
 
   saveFileToStaging(fileData) {
-    // In GAS runtime, save to Google Drive private folder
-    // In memory runtime, store base64 in map
+    if (this.isGasRuntime && typeof DriveApp !== "undefined") {
+      try {
+        const folderId = (typeof AppConfig !== "undefined") ? AppConfig.getDriveRootFolderId() : "";
+        const folder = folderId ? DriveApp.getFolderById(folderId) : DriveApp.getRootFolder();
+        const rawBase64 = (fileData.file_base64 || "").replace(/^data:image\/\w+;base64,/, "");
+        const decoded = Utilities.base64Decode(rawBase64);
+        const blob = Utilities.newBlob(decoded, fileData.mime_type || "image/jpeg", fileData.file_name || "evidence.jpg");
+        const file = folder.createFile(blob);
+        return file.getId();
+      } catch (err) {
+        if (typeof Logger !== "undefined") Logger.log("Drive upload error: " + err.message);
+      }
+    }
     if (!this.fileStorage) this.fileStorage = new Map();
     const driveFileId = `drv_${AuthService.generateSecureToken().substring(0, 16)}`;
     this.fileStorage.set(driveFileId, fileData.file_base64);
@@ -373,6 +524,15 @@ class SheetRepository {
   }
 
   readDriveFileAsBase64(driveFileId) {
+    if (this.isGasRuntime && typeof DriveApp !== "undefined" && driveFileId && !driveFileId.startsWith("drv_")) {
+      try {
+        const file = DriveApp.getFileById(driveFileId);
+        const bytes = file.getBlob().getBytes();
+        return Utilities.base64Encode(bytes);
+      } catch (err) {
+        if (typeof Logger !== "undefined") Logger.log("Drive read error: " + err.message);
+      }
+    }
     if (!this.fileStorage) this.fileStorage = new Map();
     return this.fileStorage.get(driveFileId) || "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
   }
@@ -398,28 +558,23 @@ class SheetRepository {
   }
 
   saveGroup(group) {
-    const table = this.getTable("Groups");
-    table.push({ ...group });
+    this.appendRowToTable("Groups", { ...group });
   }
 
   saveGroupMembershipSnapshot(snapshot) {
-    const table = this.getTable("GroupMembershipSnapshots");
-    table.push({ ...snapshot });
+    this.appendRowToTable("GroupMembershipSnapshots", { ...snapshot });
   }
 
   saveGroupScoreComponent(gsc) {
-    const table = this.getTable("GroupScoreComponents");
-    table.push({ ...gsc });
+    this.appendRowToTable("GroupScoreComponents", { ...gsc });
   }
 
   saveIndividualScoreComponent(isc) {
-    const table = this.getTable("IndividualScoreComponents");
-    table.push({ ...isc });
+    this.appendRowToTable("IndividualScoreComponents", { ...isc });
   }
 
   saveProject(project) {
-    const table = this.getTable("Projects");
-    table.push({ ...project });
+    this.upsertRowInTable("Projects", p => p.project_id === project.project_id, project);
   }
 
   findProjectById(projectId) {
@@ -448,8 +603,7 @@ class SheetRepository {
   }
 
   saveProjectArtifact(artifact) {
-    const table = this.getTable("ProjectArtifacts");
-    table.push({ ...artifact });
+    this.appendRowToTable("ProjectArtifacts", { ...artifact });
   }
 
   findArtifactsByProjectAndKind(projectId, kind) {
@@ -458,8 +612,7 @@ class SheetRepository {
   }
 
   recordAuditLog(log) {
-    const table = this.getTable("AuditLogs");
-    table.push({ ...log, at: log.at || new Date().toISOString() });
+    this.appendRowToTable("AuditLogs", { ...log, at: log.at || new Date().toISOString() });
   }
 }
 

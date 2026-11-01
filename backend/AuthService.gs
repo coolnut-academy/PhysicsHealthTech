@@ -73,12 +73,12 @@ const AuthService = {
     const code = String(code5Digit || "").trim().padStart(5, "0");
     const secret = String(secretPlain || "").trim();
 
-    if (!code || code.length !== 5 || !secret) {
+    if (!code || code.length !== 5) {
       return {
         ok: false,
         error: {
           code: "INVALID_CREDENTIALS",
-          message_th: "รหัสนักเรียน 5 หลักหรือรหัสผ่านไม่ถูกต้อง"
+          message_th: "รหัสนักเรียน 5 หลักไม่ถูกต้อง"
         }
       };
     }
@@ -132,15 +132,20 @@ const AuthService = {
     let isMatch = false;
 
     if (credential) {
-      const expectedHmac = this.hmacSha256(serverPepper, `${student.student_uid}:${credential.salt}:${secret}`);
-      if (expectedHmac === credential.verifier) {
-        isMatch = true;
+      if (secret) {
+        const expectedHmac = this.hmacSha256(serverPepper, `${student.student_uid}:${credential.salt}:${secret}`);
+        if (expectedHmac === credential.verifier) {
+          isMatch = true;
+        }
       }
     } else if (student.secret_plain) {
       // Direct comparison for development fixtures only
-      if (student.secret_plain === secret) {
+      if (secret && student.secret_plain === secret) {
         isMatch = true;
       }
+    } else {
+      // Passwordless student login mode: When no credential is set in StudentCredentials, login directly with 5-digit code
+      isMatch = true;
     }
 
     if (!isMatch) {
@@ -187,6 +192,20 @@ const AuthService = {
 
     repository.saveSession(session);
 
+    const enrollments = repository.getTable("Enrollments") || [];
+    const studentEnrollments = enrollments.filter(e => e.student_uid === student.student_uid && e.status === "active");
+    studentEnrollments.sort((a, b) => (repository.getYearBe(b.academic_year_id) || 0) - (repository.getYearBe(a.academic_year_id) || 0));
+    const activeEnr = studentEnrollments[0];
+
+    const availableEnrollments = studentEnrollments.map(e => ({
+      enrollment_id: e.enrollment_id,
+      academic_year_id: e.academic_year_id,
+      year_be: repository.getYearBe(e.academic_year_id),
+      grade: e.grade,
+      room: e.room,
+      roll_no: e.roll_no
+    }));
+
     return {
       ok: true,
       data: {
@@ -196,7 +215,12 @@ const AuthService = {
           student_uid: student.student_uid,
           code_5_digit: student.code_5_digit,
           display_name: student.display_name,
-          role: "student"
+          role: "student",
+          grade: activeEnr ? activeEnr.grade : "M4",
+          room: activeEnr ? activeEnr.room : "1",
+          roll_no: activeEnr ? activeEnr.roll_no : null,
+          academic_year_id: activeEnr ? activeEnr.academic_year_id : "yr_2569",
+          available_enrollments: availableEnrollments
         }
       }
     };

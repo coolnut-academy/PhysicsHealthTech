@@ -251,7 +251,15 @@ const SubmissionService = {
    * Get student's submission history for a worksheet
    */
   getSubmissionHistory(session, payload, repository) {
-    const studentUid = Authorization.enforceStudent(session);
+    let studentUid = null;
+    if (session && (session.principal_type === "teacher" || session.role === "teacher" || session.role === "admin")) {
+      studentUid = (payload && payload.student_uid) ? payload.student_uid : null;
+      if (!studentUid) {
+        throw new Error("INVALID_REQUEST: โปรดระบุ student_uid");
+      }
+    } else {
+      studentUid = Authorization.enforceStudent(session);
+    }
     const { worksheet_code, academic_year_id, grade } = payload || {};
 
     const submission = repository.findSubmissionByWorksheetAndStudent(worksheet_code, studentUid, academic_year_id, grade);
@@ -259,17 +267,21 @@ const SubmissionService = {
       return { ok: true, data: { worksheet_code, versions: [] } };
     }
 
-    const versions = repository.findSubmissionVersions(submission.submission_id);
+    const versions = repository.findSubmissionVersions(submission.submission_id) || [];
+    versions.sort((a, b) => (Number(b.version_no) || 0) - (Number(a.version_no) || 0));
+
     const versionItems = versions.map(v => {
-      const files = repository.findFilesForVersion(v.submission_version_id);
+      const files = repository.findFilesForVersion(v.submission_version_id) || [];
       const review = repository.findEvidenceReviewForVersion(v.submission_version_id);
       return {
+        submission_version_id: v.submission_version_id,
         version_no: v.version_no,
         submitted_at: v.submitted_at,
         note: v.note,
         state_at_submit: v.state_at_submit,
         files: files.map(f => ({
           evidence_id: f.evidence_id,
+          file_name: f.file_name,
           mime_type: f.mime_type,
           size_bytes: f.size_bytes
         })),

@@ -111,6 +111,883 @@
     ]
   };
 
+
+  const OFFICIAL_STUDENTS_2569 = [
+    {
+        "student_uid": "std_99999",
+        "code_5_digit": "99999",
+        "display_name": "นายทดสอบ ห้องวิทย์สุขภาพ",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17763",
+        "code_5_digit": "17763",
+        "display_name": "นายพิพัฒน์ จุลบุตร",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17808",
+        "code_5_digit": "17808",
+        "display_name": "นายอโณทัย จรัญไชยกุล",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17837",
+        "code_5_digit": "17837",
+        "display_name": "นายชัชพงษ์ ไชยา",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17875",
+        "code_5_digit": "17875",
+        "display_name": "นายกฤตนันท์ กมลดีเยี่ยม",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17997",
+        "code_5_digit": "17997",
+        "display_name": "นายธำรงวิทย์ สกุลแก้วทิพย์",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_19447",
+        "code_5_digit": "19447",
+        "display_name": "นายวิธวินท์ วารุณรัตนกร",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17779",
+        "code_5_digit": "17779",
+        "display_name": "นางสาวพนิดา นันทภัทร",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17780",
+        "code_5_digit": "17780",
+        "display_name": "นางสาวพรรณภัทร ภู่ตระกูล",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17784",
+        "code_5_digit": "17784",
+        "display_name": "นางสาวพีชญา สุธรรม",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17789",
+        "code_5_digit": "17789",
+        "display_name": "นางสาวสุวพิชชา บุญโญรส",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17790",
+        "code_5_digit": "17790",
+        "display_name": "นางสาวหน่อคริเฮ่ตา",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17810",
+        "code_5_digit": "17810",
+        "display_name": "นางสาวกันย์สินี ศรีชัยสถาน",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17813",
+        "code_5_digit": "17813",
+        "display_name": "นางสาวชมพูนุช เมธาธารณ์กุล",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17814",
+        "code_5_digit": "17814",
+        "display_name": "นางสาวชุติกาญจน์ ทองประดิษฐ์",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17817",
+        "code_5_digit": "17817",
+        "display_name": "นางสาวณัฐาวีรนุช เมืองเมา",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17826",
+        "code_5_digit": "17826",
+        "display_name": "เด็กหญิงลักษิกา ถาวร",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17827",
+        "code_5_digit": "17827",
+        "display_name": "นางสาววันเพ็ญ แว่นมรกต",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17832",
+        "code_5_digit": "17832",
+        "display_name": "นางสาวเกวลี ไพรสรรเสริญ",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17858",
+        "code_5_digit": "17858",
+        "display_name": "นางสาวชุติมา ธรรมเกิดสุข",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17860",
+        "code_5_digit": "17860",
+        "display_name": "นางสาวณัฐกฤตา มิ่งขวัญ",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17869",
+        "code_5_digit": "17869",
+        "display_name": "เด็กหญิงพิชญ์สินี วงศ์อรฉัตร",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17900",
+        "code_5_digit": "17900",
+        "display_name": "นางสาวณัฐกมล ทาลาว",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17947",
+        "code_5_digit": "17947",
+        "display_name": "นางสาวพิชญา พนมไพร",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17979",
+        "code_5_digit": "17979",
+        "display_name": "นางสาวกาญจนา ไกรเกริกเกียรติ",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17983",
+        "code_5_digit": "17983",
+        "display_name": "นางสาวนฐพร จุลบุตร",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_18058",
+        "code_5_digit": "18058",
+        "display_name": "นางสาวฐิติมา คำนวณพนม",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_18680",
+        "code_5_digit": "18680",
+        "display_name": "นางสาวฟ้าใส มุ่งศรีโสภณ",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_19448",
+        "code_5_digit": "19448",
+        "display_name": "นางสาวมนต์นภา ปัทมชัยกุล",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_19449",
+        "code_5_digit": "19449",
+        "display_name": "นางสาวธัญนิศญาน์ หว่างไม",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_19450",
+        "code_5_digit": "19450",
+        "display_name": "เด็กหญิงแสงดาว เรืองแก้วนพเก้า",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17388",
+        "code_5_digit": "17388",
+        "display_name": "นายพิตติพันท์ ปิยโชคนิธิสกุล",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17395",
+        "code_5_digit": "17395",
+        "display_name": "นายฐิติวัสส์ พัฒน์พงศ์สกุล",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17397",
+        "code_5_digit": "17397",
+        "display_name": "นายหาญหนุ่ม",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17539",
+        "code_5_digit": "17539",
+        "display_name": "นายณัฐวุฒิ เสรีธรรมพิทักษ์",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17581",
+        "code_5_digit": "17581",
+        "display_name": "นายพงษ์สิทธิ์ เลาซาง",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_18721",
+        "code_5_digit": "18721",
+        "display_name": "นายธีรศานต์ เชาว์พิกุล",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_18722",
+        "code_5_digit": "18722",
+        "display_name": "นายสุรนาท ศรีปัญญาเลิศ",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_18723",
+        "code_5_digit": "18723",
+        "display_name": "นายเทพรัตน์ โซพุทรา",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17405",
+        "code_5_digit": "17405",
+        "display_name": "นางสาวณัฐณิชา มงคล",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17411",
+        "code_5_digit": "17411",
+        "display_name": "นางสาวนิจวิภา พรานวิเวทย์",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17440",
+        "code_5_digit": "17440",
+        "display_name": "เด็กหญิงจันทร์ละวันดาว แซ่เจ๊า",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17441",
+        "code_5_digit": "17441",
+        "display_name": "นางสาวจิณห์ชนัณ สว่างธรรมศรี",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17458",
+        "code_5_digit": "17458",
+        "display_name": "เด็กหญิงลัลล์ลลิล สันติสุข",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17478",
+        "code_5_digit": "17478",
+        "display_name": "นางสาวกันภิรมย์ กองฤทธิ์",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17481",
+        "code_5_digit": "17481",
+        "display_name": "นางสาวจรรยพร พนมไพร",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17482",
+        "code_5_digit": "17482",
+        "display_name": "นางสาวซากุระ หว่างป่อ",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17495",
+        "code_5_digit": "17495",
+        "display_name": "นางสาววรัญรักษ์ นิยมวงษ์",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17498",
+        "code_5_digit": "17498",
+        "display_name": "นางสาวอังคณา ธนโชติหิรัญวงศ์",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17520",
+        "code_5_digit": "17520",
+        "display_name": "นางสาวกุลนัดดา จิโน",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17522",
+        "code_5_digit": "17522",
+        "display_name": "นางสาวณัฐวดี วรรณโชติโยธิน",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17532",
+        "code_5_digit": "17532",
+        "display_name": "นางสาวอัยยา มั่นคง",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17598",
+        "code_5_digit": "17598",
+        "display_name": "นางสาวแพรวดาว สร้อยคำ",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17626",
+        "code_5_digit": "17626",
+        "display_name": "นางสาวนาริรัตน์ สิงขรสุกใส",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_17630",
+        "code_5_digit": "17630",
+        "display_name": "นางสาววชิราภรณ์ ชวลิตทวีรัตน์",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_18725",
+        "code_5_digit": "18725",
+        "display_name": "นางสาวบัณฑิตา โกรกกลาง",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_18726",
+        "code_5_digit": "18726",
+        "display_name": "นางสาวพิชญา ไพรรุ่งเรือง",
+        "status": "active"
+    },
+    {
+        "student_uid": "std_19130",
+        "code_5_digit": "19130",
+        "display_name": "นางสาวมนัสนันท์ จันทร์แก้ว",
+        "status": "active"
+    }
+];
+
+  const OFFICIAL_ENROLLMENTS_2569 = [
+    {
+        "enrollment_id": "enr_m4_999",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_99999",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 99,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_001",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17763",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 1,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_002",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17808",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 2,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_003",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17837",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 3,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_004",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17875",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 4,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_005",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17997",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 5,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_006",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_19447",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 6,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_007",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17779",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 7,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_008",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17780",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 8,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_009",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17784",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 9,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_010",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17789",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 10,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_011",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17790",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 11,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_012",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17810",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 12,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_013",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17813",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 13,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_014",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17814",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 14,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_015",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17817",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 15,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_016",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17826",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 16,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_017",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17827",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 17,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_018",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17832",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 18,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_019",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17858",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 19,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_020",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17860",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 20,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_021",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17869",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 21,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_022",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17900",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 22,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_023",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17947",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 23,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_024",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17979",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 24,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_025",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17983",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 25,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_026",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_18058",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 26,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_027",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_18680",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 27,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_028",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_19448",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 28,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_029",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_19449",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 29,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m4_030",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_19450",
+        "grade": "M4",
+        "room": "1",
+        "roll_no": 30,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_001",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17388",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 1,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_002",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17395",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 2,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_003",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17397",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 3,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_004",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17539",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 4,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_005",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17581",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 5,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_006",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_18721",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 6,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_007",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_18722",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 7,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_008",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_18723",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 8,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_009",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17405",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 9,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_010",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17411",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 10,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_011",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17440",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 11,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_012",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17441",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 12,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_013",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17458",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 13,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_014",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17478",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 14,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_015",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17481",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 15,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_016",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17482",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 16,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_017",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17495",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 17,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_018",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17498",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 18,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_019",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17520",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 19,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_020",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17522",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 20,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_021",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17532",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 21,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_022",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17598",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 22,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_023",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17626",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 23,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_024",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_17630",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 24,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_025",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_18725",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 25,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_026",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_18726",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 26,
+        "status": "active"
+    },
+    {
+        "enrollment_id": "enr_m5_027",
+        "academic_year_id": "yr_2569",
+        "student_uid": "std_19130",
+        "grade": "M5",
+        "room": "1",
+        "roll_no": 27,
+        "status": "active"
+    }
+];
+
   const STUDENTS = [
     { student_uid: "std_00007", code_5_digit: "00007", display_name: "นายสมชาย มั่นใจ", secret_plain: "PhtSecret#00007A", status: "active" },
     { student_uid: "std_00123", code_5_digit: "00123", display_name: "น.ส.สมหญิง ชำนาญคิด", secret_plain: "PhtSecret#00123B", status: "active" },
@@ -132,13 +1009,18 @@
 
   // In-memory data store for browser session
   const memoryDB = {
-    students: [...STUDENTS],
+    students: [...STUDENTS, ...OFFICIAL_STUDENTS_2569],
     teachers: [...TEACHERS],
-    enrollments: [...ENROLLMENTS],
-    syllabi: [M4_SYLLABUS, M5_SYLLABUS],
+    enrollments: [...ENROLLMENTS, ...OFFICIAL_ENROLLMENTS_2569],
+    syllabi: [
+      M4_SYLLABUS,
+      M5_SYLLABUS,
+      { ...M4_SYLLABUS, syllabus_version_id: "syl_m4_2569_v1", academic_year_id: "yr_2569" },
+      { ...M5_SYLLABUS, syllabus_version_id: "syl_m5_2569_v1", academic_year_id: "yr_2569" }
+    ],
     years: [
-      { academic_year_id: "yr_2570", year_be: 2570, state: "open" },
-      { academic_year_id: "yr_2569", year_be: 2569, state: "archived" }
+      { academic_year_id: "yr_2569", year_be: 2569, state: "open" },
+      { academic_year_id: "yr_2570", year_be: 2570, state: "open" }
     ],
     submissions: [],
     submissionVersions: [],
@@ -214,15 +1096,44 @@
         const code = String(code_5_digit || "").trim().padStart(5, "0");
         const student = memoryDB.students.find(s => s.code_5_digit === code);
 
-        if (!student || student.secret_plain !== secret) {
-          return { ok: false, error: { code: "INVALID_CREDENTIALS", message_th: "รหัสนักเรียน 5 หลักหรือรหัสผ่านไม่ถูกต้อง" } };
+        if (!student) {
+          return { ok: false, error: { code: "INVALID_CREDENTIALS", message_th: "ไม่พบรหัสนักเรียน 5 หลักนี้ในระบบ" } };
+        }
+
+        // Check password only if password is configured and wrong password entered
+        if (student.secret_plain && secret && student.secret_plain !== secret) {
+          return { ok: false, error: { code: "INVALID_CREDENTIALS", message_th: "รหัสผ่านไม่ถูกต้อง" } };
         }
 
         const token = "mock_token_" + Math.random().toString(16).substring(2);
+        
+        // Find active enrollments
+        const studentEnrollments = memoryDB.enrollments.filter(e => e.student_uid === student.student_uid && e.status === "active");
+        studentEnrollments.sort((a, b) => b.academic_year_id.localeCompare(a.academic_year_id));
+        const activeEnr = studentEnrollments[0] || null;
+
+        const availableEnrollments = studentEnrollments.map(e => {
+          const yr = memoryDB.years.find(y => y.academic_year_id === e.academic_year_id);
+          const yNum = yr ? yr.year_be : parseInt(e.academic_year_id.replace(/\D/g, "") || "2569", 10);
+          return {
+            enrollment_id: e.enrollment_id,
+            academic_year_id: e.academic_year_id,
+            year: yNum,
+            grade: e.grade,
+            room: e.room,
+            roll_no: e.roll_no
+          };
+        });
+
+        const activeYr = activeEnr ? (memoryDB.years.find(y => y.academic_year_id === activeEnr.academic_year_id)?.year_be || 2569) : 2569;
+
         memoryDB.sessions.set(token, {
           principal_uid: student.student_uid,
           principal_type: "student",
-          role: "student"
+          role: "student",
+          enrollment_id: activeEnr ? activeEnr.enrollment_id : null,
+          academic_year_id: activeEnr ? activeEnr.academic_year_id : "yr_2569",
+          grade: activeEnr ? activeEnr.grade : "M4"
         });
 
         return {
@@ -233,7 +1144,13 @@
               student_uid: student.student_uid,
               code_5_digit: student.code_5_digit,
               display_name: student.display_name,
-              role: "student"
+              role: "student",
+              grade: activeEnr ? activeEnr.grade : null,
+              room: activeEnr ? activeEnr.room : null,
+              roll_no: activeEnr ? activeEnr.roll_no : null,
+              academic_year: activeYr,
+              academic_year_id: activeEnr ? activeEnr.academic_year_id : null,
+              available_enrollments: availableEnrollments
             }
           }
         };
@@ -285,10 +1202,26 @@
 
       // 2. Student Dashboard
       if (action === "student.dashboard") {
-        const { academic_year_id = "yr_2570", grade = "M4" } = payload;
         const student = memoryDB.students.find(s => s.student_uid === session.principal_uid);
-        const enrollment = memoryDB.enrollments.find(e => e.student_uid === session.principal_uid && e.academic_year_id === academic_year_id && e.grade === grade);
-        const syllabus = memoryDB.syllabi.find(s => s.academic_year_id === academic_year_id && s.grade === grade);
+        let enrollment = null;
+        if (payload.enrollment_id) {
+          enrollment = memoryDB.enrollments.find(e => e.enrollment_id === payload.enrollment_id && e.student_uid === session.principal_uid);
+        }
+        if (!enrollment && payload.academic_year_id && payload.grade) {
+          enrollment = memoryDB.enrollments.find(e => e.student_uid === session.principal_uid && e.academic_year_id === payload.academic_year_id && e.grade === payload.grade);
+        }
+        if (!enrollment) {
+          const studentEnrs = memoryDB.enrollments.filter(e => e.student_uid === session.principal_uid && e.status === "active");
+          studentEnrs.sort((a, b) => b.academic_year_id.localeCompare(a.academic_year_id));
+          enrollment = studentEnrs[0] || null;
+        }
+
+        const academic_year_id = enrollment ? enrollment.academic_year_id : (payload.academic_year_id || session.academic_year_id || "yr_2569");
+        const grade = enrollment ? enrollment.grade : (payload.grade || session.grade || "M4");
+        let syllabus = memoryDB.syllabi.find(s => s.academic_year_id === academic_year_id && s.grade === grade);
+        if (!syllabus) {
+          syllabus = memoryDB.syllabi.find(s => s.grade === grade);
+        }
 
         const publishedGrades = memoryDB.gradeEntries.filter(g => g.student_uid === session.principal_uid && g.syllabus_version_id === syllabus.syllabus_version_id && g.state === "published");
         const bonuses = memoryDB.bonusAwards.filter(b => b.student_uid === session.principal_uid && b.state === "approved");
@@ -375,7 +1308,15 @@
               student_uid: student.student_uid,
               code_5_digit: student.code_5_digit,
               display_name: student.display_name,
-              year_be: 2570,
+              year_be: enrollment ? (memoryDB.years.find(y => y.academic_year_id === enrollment.academic_year_id)?.year_be || 2569) : 2569,
+              available_enrollments: memoryDB.enrollments.filter(e => e.student_uid === student.student_uid && e.status === "active").map(e => ({
+                enrollment_id: e.enrollment_id,
+                academic_year_id: e.academic_year_id,
+                year: memoryDB.years.find(y => y.academic_year_id === e.academic_year_id)?.year_be || parseInt(e.academic_year_id.replace(/\D/g, "") || "2569", 10),
+                grade: e.grade,
+                room: e.room,
+                roll_no: e.roll_no
+              })),
               grade: grade,
               room: enrollment ? enrollment.room : null,
               roll_no: enrollment ? enrollment.roll_no : null,
@@ -469,6 +1410,53 @@
             version_no: newVer,
             status_label_th: "ส่งแล้ว — รอตรวจ",
             message_th: "ส่งใบงานเรียบร้อยแล้ว"
+          }
+        };
+      }
+
+      if (action === "submissions.history") {
+        let studentUid = session.principal_uid;
+        if (session.principal_type === "teacher" || session.role === "teacher") {
+          studentUid = payload.student_uid || session.principal_uid;
+        }
+        const { worksheet_code } = payload;
+        const sub = memoryDB.submissions.find(s => s.worksheet_code === worksheet_code && s.student_uid === studentUid);
+        if (!sub) {
+          return { ok: true, data: { worksheet_code, latest_version_no: 0, versions: [] } };
+        }
+        const versions = memoryDB.submissionVersions
+          .filter(v => v.submission_id === sub.submission_id)
+          .sort((a, b) => b.version_no - a.version_no)
+          .map(v => {
+            const files = memoryDB.stagedFiles.filter(f => f.submission_version_id === v.submission_version_id);
+            const review = memoryDB.evidenceReviews.find(r => r.submission_id === sub.submission_id);
+            return {
+              submission_version_id: v.submission_version_id,
+              version_no: v.version_no,
+              submitted_at: v.submitted_at,
+              note: v.note,
+              files: files.map(f => ({
+                evidence_id: f.evidence_id,
+                file_name: f.file_name || "evidence.jpg",
+                mime_type: f.mime_type || "image/jpeg",
+                size_bytes: f.size_bytes || 1024,
+                data_url: f.data_url || ""
+              })),
+              review: review ? {
+                decision_state: review.decision_state,
+                feedback: review.feedback,
+                reviewed_at: review.reviewed_at
+              } : null
+            };
+          });
+
+        return {
+          ok: true,
+          data: {
+            submission_id: sub.submission_id,
+            worksheet_code,
+            latest_version_no: sub.latest_version_no,
+            versions
           }
         };
       }
@@ -648,6 +1636,81 @@
       }
 
       // 10. Teacher Export
+            // 11. Teacher Import Roster
+      if (action === "teacher.importRoster") {
+        const { year_be, students: rosterRows } = payload;
+        const yearBeInt = parseInt(year_be, 10);
+        const yearId = `yr_${yearBeInt}`;
+
+        let year = memoryDB.years.find(y => y.year_be === yearBeInt);
+        if (!year) {
+          memoryDB.years.push({ academic_year_id: yearId, year_be: yearBeInt, state: "open" });
+        }
+
+        let count = 0;
+        for (const row of (rosterRows || [])) {
+          const rawCode = String(row.code_5_digit || "").trim().replace(/^'/, "");
+          if (!rawCode) continue;
+          const code5Digit = rawCode.padStart(5, "0");
+          let displayName = (row.display_name || "").trim();
+          if (!displayName && (row.first_name || row.fname)) {
+            const title = (row.title || "").trim();
+            const fname = (row.first_name || row.fname || "").trim();
+            const lname = (row.last_name || row.lname || "").trim();
+            displayName = `${title}${fname} ${lname}`.trim();
+          }
+          if (!displayName) displayName = `นักเรียนรหัส ${code5Digit}`;
+
+          const grade = (row.grade || "M4").toUpperCase().trim();
+          const room = String(row.room || "1").trim();
+          const rollNo = parseInt(row.roll_no || 0, 10) || 0;
+
+          let student = memoryDB.students.find(s => s.code_5_digit === code5Digit);
+          let studentUid = "";
+          if (student) {
+            studentUid = student.student_uid;
+            student.display_name = displayName;
+          } else {
+            studentUid = `std_${code5Digit}`;
+            student = {
+              student_uid: studentUid,
+              code_5_digit: code5Digit,
+              display_name: displayName,
+              status: "active"
+            };
+            memoryDB.students.push(student);
+          }
+
+          const enrId = `enr_${yearBeInt}_${grade.toLowerCase()}_${String(rollNo).padStart(3, "0")}`;
+          const existingEnrIdx = memoryDB.enrollments.findIndex(e => e.enrollment_id === enrId);
+          const enrObj = {
+            enrollment_id: enrId,
+            academic_year_id: yearId,
+            student_uid: studentUid,
+            grade: grade,
+            room: room,
+            roll_no: rollNo,
+            status: "active"
+          };
+          if (existingEnrIdx >= 0) {
+            memoryDB.enrollments[existingEnrIdx] = enrObj;
+          } else {
+            memoryDB.enrollments.push(enrObj);
+          }
+          count++;
+        }
+
+        return {
+          ok: true,
+          data: {
+            academic_year_id: yearId,
+            year_be: yearBeInt,
+            total_processed: count,
+            message_th: `นำเข้าข้อมูลปีการศึกษา ${yearBeInt} เรียบร้อยแล้ว (${count} คน)`
+          }
+        };
+      }
+
       if (action === "teacher.exportGradebook") {
         const csvContent = "\uFEFFเลขที่,รหัสนักเรียน,ชื่อ-นามสกุล,ห้อง,ส่งแล้ว,ตรวจแล้ว,คะแนนสะสม\r\n1,00007,นายสมชาย มั่นใจ,1,1,1,9.5\r\n2,00123,น.ส.สมหญิง ชำนาญคิด,1,0,0,0.0\r\n10,00999,นายกิตติศักดิ์ นักประดิษฐ์,1,0,0,0.0";
         return {
