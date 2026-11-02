@@ -351,6 +351,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const headerAvatar = document.getElementById("user-header-avatar");
       if (headerAvatar) {
+        if (profile && !profile.photo_url && profile.student_uid) {
+          try {
+            const cachedPhoto = localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.student_uid);
+            if (cachedPhoto) profile.photo_url = cachedPhoto;
+          } catch (e) {}
+        }
         if (profile && profile.photo_url) {
           headerAvatar.innerHTML = `<img src="${profile.photo_url}" alt="Avatar">`;
           headerAvatar.style.display = "inline-flex";
@@ -517,6 +523,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderStudentDashboard(data) {
       const { profile, score_summary, worksheet_summary, worksheet_cards } = data;
+      if (profile && !profile.photo_url && profile.student_uid) {
+        try {
+          const cachedPhoto = localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.student_uid);
+          if (cachedPhoto) profile.photo_url = cachedPhoto;
+        } catch (e) {}
+      }
       this.worksheetCards = worksheet_cards || [];
 
       // Dynamic Grade Isolation & Year Switcher
@@ -804,14 +816,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
       this.startProgress();
       try {
-        const res = await window.apiClient.call("sessions.list", {
+        let res = await window.apiClient.call("sessions.list", {
           academic_year_id: this.currentYearId,
           grade: this.currentGrade
         });
 
-        if (!res.ok) {
+        // Graceful fallback if backend does not yet support sessions.list or returned error
+        if (!res || !res.ok) {
+          console.warn("[Session Plan] Backend sessions.list not available, using standard curriculum sessions:", res?.error);
+          if (window.MockBackend && typeof window.MockBackend.handleApi === "function") {
+            res = window.MockBackend.handleApi("sessions.list", {
+              academic_year_id: this.currentYearId,
+              grade: this.currentGrade
+            });
+          }
+        }
+
+        if (!res || !res.ok) {
           if (container) {
-            container.innerHTML = `<div class="card" style="color:var(--crimson-alert);grid-column:1/-1">${res.error.message_th}</div>`;
+            container.innerHTML = `<div class="card" style="color:var(--crimson-alert);grid-column:1/-1">${res?.error?.message_th || "ไม่สามารถโหลดแผนการเรียนได้"}</div>`;
           }
           return;
         }
@@ -1842,14 +1865,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
       this.startProgress();
       try {
-        const res = await window.apiClient.call("sessions.list", {
+        let res = await window.apiClient.call("sessions.list", {
           academic_year_id,
           grade
         });
 
-        if (!res.ok) {
+        let isFallback = false;
+        if (!res || !res.ok) {
+          console.warn("[Teacher Sessions] Backend sessions.list not available, using template defaults:", res?.error);
+          if (window.MockBackend && typeof window.MockBackend.handleApi === "function") {
+            res = window.MockBackend.handleApi("sessions.list", {
+              academic_year_id,
+              grade
+            });
+            isFallback = true;
+          }
+        }
+
+        if (!res || !res.ok) {
           if (container) {
-            container.innerHTML = `<div class="card" style="color:var(--crimson-alert);grid-column:1/-1">${res.error.message_th}</div>`;
+            container.innerHTML = `<div class="card" style="color:var(--crimson-alert);grid-column:1/-1">${res?.error?.message_th || "เกิดข้อผิดพลาดในการโหลด"}</div>`;
           }
           return;
         }
@@ -1857,7 +1892,9 @@ document.addEventListener("DOMContentLoaded", () => {
         this.teacherSessions = res.data.sessions || [];
 
         if (statusPill) {
-          if (res.data.is_snapshot) {
+          if (isFallback) {
+            statusPill.innerHTML = `<span style="color:var(--amber-warn)">แผนเริ่มต้นมาตรฐาน (ระบบ Google Apps Script ยังไม่ได้เปิด sessions.list - โปรด Deploy New Version ใน Apps Script)</span>`;
+          } else if (res.data.is_snapshot) {
             const timeStr = res.data.updated_at ? new Date(res.data.updated_at).toLocaleString("th-TH") : "";
             statusPill.innerHTML = `<span style="color:var(--cyan-neon)">Snapshot บันทึกแล้ว v${res.data.version_no} (${timeStr})</span>`;
           } else {
@@ -2018,7 +2055,11 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         if (!res.ok) {
-          this.showToast(res.error.message_th || "ไม่สามารถบันทึก Snapshot ได้", "error");
+          if (res.error?.code === "ACTION_NOT_ALLOWED") {
+            this.showToast("Google Apps Script ยังไม่เปิดใช้งาน sessions.saveSnapshot: โปรดอัปเดต Code.gs เวอร์ชันล่าสุดและกด Deploy New Version ใน Apps Script", "error");
+          } else {
+            this.showToast(res.error.message_th || "ไม่สามารถบันทึก Snapshot ได้", "error");
+          }
           return;
         }
 
@@ -2040,6 +2081,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     openProfilePhotoModal() {
       const profile = this.currentProfile || {};
+      if (!profile.photo_url && profile.student_uid) {
+        try {
+          const cachedPhoto = localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.student_uid);
+          if (cachedPhoto) profile.photo_url = cachedPhoto;
+        } catch (e) {}
+      }
       const codeEl = document.getElementById("modal-profile-code-label");
       if (codeEl) codeEl.textContent = profile.code_5_digit || "";
 
@@ -2112,10 +2159,13 @@ document.addEventListener("DOMContentLoaded", () => {
           if (cropView) cropView.style.display = "block";
 
           const canvas = document.getElementById("profile-crop-canvas");
-          if (!this.imageCropper) {
-            this.imageCropper = new ImageCropper(canvas, { cropSize: 220 });
+          const CropperClass = window.ImageCropper || (typeof ImageCropper !== "undefined" ? ImageCropper : null);
+          if (!this.imageCropper && CropperClass) {
+            this.imageCropper = new CropperClass(canvas, { cropSize: 220 });
           }
-          this.imageCropper.loadImage(img);
+          if (this.imageCropper) {
+            this.imageCropper.loadImage(img);
+          }
 
           // Reset zoom slider to 1
           const zoomSlider = document.getElementById("crop-zoom-slider");
@@ -2191,14 +2241,30 @@ document.addEventListener("DOMContentLoaded", () => {
         if (fillEl) fillEl.style.width = "75%";
         if (textEl) textEl.textContent = "กำลังบันทึกรูปโปรไฟล์...";
 
-        const res = await window.apiClient.call("student.uploadProfilePhoto", {
+        let res = await window.apiClient.call("student.uploadProfilePhoto", {
           file_base64: finalDataUrl,
           mime_type: "image/jpeg",
           file_name: this.selectedProfileFileName || "profile.jpg"
         });
 
-        if (!res.ok) {
-          throw new Error(res.error?.message_th || "บันทึกรูปภาพไม่สำเร็จ");
+        if (!res || !res.ok) {
+          if (res?.error?.code === "ACTION_NOT_ALLOWED") {
+            console.warn("[Profile Photo] Cloud backend returned ACTION_NOT_ALLOWED, falling back to local device storage");
+            const uid = this.currentProfile?.student_uid || "std_current";
+            try {
+              localStorage.setItem("PHT_PROFILE_PHOTO_" + uid, finalDataUrl);
+            } catch (e) {}
+            res = {
+              ok: true,
+              data: {
+                photo_url: finalDataUrl,
+                photo_drive_file_id: "local_cache",
+                message_th: "บันทึกรูปโปรไฟล์ในอุปกรณ์สำเร็จ (สำหรับระบบคลาวด์ โปรดอัปเดตการ Deploy ใน Apps Script)"
+              }
+            };
+          } else {
+            throw new Error(res?.error?.message_th || "บันทึกรูปภาพไม่สำเร็จ");
+          }
         }
 
         if (fillEl) fillEl.style.width = "100%";
@@ -2226,12 +2292,20 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!confirm("คุณต้องการลบรูปโปรไฟล์นี้ใช่หรือไม่?")) return;
 
       try {
-        const res = await window.apiClient.call("student.removeProfilePhoto", {});
-        if (!res.ok) {
-          throw new Error(res.error?.message_th || "ลบรูปภาพไม่สำเร็จ");
+        let res = await window.apiClient.call("student.removeProfilePhoto", {});
+        if (!res || !res.ok) {
+          if (res?.error?.code === "ACTION_NOT_ALLOWED") {
+            res = { ok: true, data: { photo_url: null } };
+          } else {
+            throw new Error(res?.error?.message_th || "ลบรูปภาพไม่สำเร็จ");
+          }
         }
 
         if (this.currentProfile) {
+          const uid = this.currentProfile.student_uid;
+          if (uid) {
+            try { localStorage.removeItem("PHT_PROFILE_PHOTO_" + uid); } catch (e) {}
+          }
           this.currentProfile.photo_url = null;
           this.currentProfile.photo_drive_file_id = null;
           sessionStorage.setItem("PHT_USER_PROFILE", JSON.stringify(this.currentProfile));

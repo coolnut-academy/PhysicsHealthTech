@@ -20,10 +20,13 @@ console.log("===============================================================");
 console.log("     PhysicsHealthTech V2.0 - Comprehensive Test Suite         ");
 console.log("===============================================================\n");
 
-let totalSuites = 12;
+let totalSuites = 13;
 let passedSuites = 0;
 
 try {
+  require("./test-image-cropper");
+  passedSuites++;
+
   runGradingEngineTests();
   passedSuites++;
 
