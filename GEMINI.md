@@ -28,3 +28,4 @@ Whenever data is created, uploaded, modified, or fetched, trace the complete 5-s
 
 ## 4. Graceful Fallbacks & Defensive Coding
 - If an external cloud service or API is pending deployment, version update, or network unreachable, provide seamless client fallbacks and clear, actionable feedback rather than displaying raw error traces or blank views.
+
