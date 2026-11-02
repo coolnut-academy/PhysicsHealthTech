@@ -523,11 +523,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
     renderStudentDashboard(data) {
       const { profile, score_summary, worksheet_summary, worksheet_cards } = data;
-      if (profile && !profile.photo_url && profile.student_uid) {
-        try {
-          const cachedPhoto = localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.student_uid);
-          if (cachedPhoto) profile.photo_url = cachedPhoto;
-        } catch (e) {}
+      if (profile) {
+        if (!profile.photo_url) {
+          const cachedPhoto = (profile.student_uid && localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.student_uid))
+            || (profile.code_5_digit && localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.code_5_digit))
+            || (this.currentProfile && this.currentProfile.photo_url);
+          if (cachedPhoto) {
+            profile.photo_url = cachedPhoto;
+          }
+        }
+        if (profile.photo_url) {
+          if (this.currentProfile) {
+            this.currentProfile.photo_url = profile.photo_url;
+            sessionStorage.setItem("PHT_USER_PROFILE", JSON.stringify(this.currentProfile));
+          }
+          try {
+            if (profile.student_uid) localStorage.setItem("PHT_PROFILE_PHOTO_" + profile.student_uid, profile.photo_url);
+            if (profile.code_5_digit) localStorage.setItem("PHT_PROFILE_PHOTO_" + profile.code_5_digit, profile.photo_url);
+          } catch (e) {}
+        }
       }
       this.worksheetCards = worksheet_cards || [];
 
@@ -2129,6 +2143,46 @@ document.addEventListener("DOMContentLoaded", () => {
       this.refreshIcons();
     },
 
+    updateAvatarOnScreen(photoUrl) {
+      if (!photoUrl) return;
+
+      // 1. Update Student Profile Banner Avatar
+      const avatarZone = document.getElementById("student-avatar-click-zone");
+      if (avatarZone) {
+        let img = document.getElementById("student-profile-avatar-img");
+        const placeholder = document.getElementById("student-profile-avatar-placeholder");
+        if (img) {
+          img.src = photoUrl;
+        } else {
+          if (placeholder) placeholder.remove();
+          const newImg = document.createElement("img");
+          newImg.src = photoUrl;
+          newImg.alt = "Profile Photo";
+          newImg.className = "student-avatar-img";
+          newImg.id = "student-profile-avatar-img";
+          avatarZone.insertBefore(newImg, avatarZone.firstChild);
+        }
+      }
+
+      // 2. Update Header Avatar
+      const headerAvatar = document.getElementById("user-header-avatar");
+      if (headerAvatar) {
+        headerAvatar.innerHTML = `<img src="${photoUrl}" alt="Avatar">`;
+        headerAvatar.style.display = "inline-flex";
+      }
+
+      // 3. Update Modal Current Avatar Preview
+      const modalAvatar = document.getElementById("modal-profile-current-avatar");
+      const modalEmpty = document.getElementById("modal-profile-empty-avatar");
+      const btnRemove = document.getElementById("btn-modal-remove-photo");
+      if (modalAvatar) {
+        modalAvatar.src = photoUrl;
+        modalAvatar.style.display = "block";
+      }
+      if (modalEmpty) modalEmpty.style.display = "none";
+      if (btnRemove) btnRemove.style.display = "inline-flex";
+    },
+
     closeProfilePhotoModal() {
       const modal = document.getElementById("modal-student-profile-photo");
       if (modal) modal.style.display = "none";
@@ -2270,11 +2324,34 @@ document.addEventListener("DOMContentLoaded", () => {
         if (fillEl) fillEl.style.width = "100%";
         if (textEl) textEl.textContent = "บันทึกรูปโปรไฟล์เรียบร้อยแล้ว!";
 
+        const savedPhotoUrl = res.data?.photo_url || finalDataUrl;
+        const uid = this.currentProfile?.student_uid;
+        const code = this.currentProfile?.code_5_digit;
+
+        // Persist photo in localStorage so it NEVER disappears across dashboard fetches
+        try {
+          if (uid) localStorage.setItem("PHT_PROFILE_PHOTO_" + uid, savedPhotoUrl);
+          if (code) localStorage.setItem("PHT_PROFILE_PHOTO_" + code, savedPhotoUrl);
+        } catch (e) {}
+
         if (this.currentProfile) {
-          this.currentProfile.photo_url = res.data.photo_url;
-          this.currentProfile.photo_drive_file_id = res.data.photo_drive_file_id;
+          this.currentProfile.photo_url = savedPhotoUrl;
+          this.currentProfile.photo_drive_file_id = res.data?.photo_drive_file_id || "drive_linked";
           sessionStorage.setItem("PHT_USER_PROFILE", JSON.stringify(this.currentProfile));
         }
+
+        // Invalidate stale dashboard SWR caches
+        try {
+          for (let i = sessionStorage.length - 1; i >= 0; i--) {
+            const k = sessionStorage.key(i);
+            if (k && k.startsWith("PHT_CACHE_DASHBOARD_")) {
+              sessionStorage.removeItem(k);
+            }
+          }
+        } catch (e) {}
+
+        // Update the avatar on screen IMMEDIATELY
+        this.updateAvatarOnScreen(savedPhotoUrl);
 
         setTimeout(() => {
           this.closeProfilePhotoModal();
@@ -2301,14 +2378,49 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
 
-        if (this.currentProfile) {
-          const uid = this.currentProfile.student_uid;
-          if (uid) {
-            try { localStorage.removeItem("PHT_PROFILE_PHOTO_" + uid); } catch (e) {}
+        const uid = this.currentProfile?.student_uid;
+        const code = this.currentProfile?.code_5_digit;
+        if (uid) {
+          try { localStorage.removeItem("PHT_PROFILE_PHOTO_" + uid); } catch (e) {}
+        }
+        if (code) {
+          try { localStorage.removeItem("PHT_PROFILE_PHOTO_" + code); } catch (e) {}
+        }
+
+        // Invalidate stale dashboard SWR caches
+        try {
+          for (let i = sessionStorage.length - 1; i >= 0; i--) {
+            const k = sessionStorage.key(i);
+            if (k && k.startsWith("PHT_CACHE_DASHBOARD_")) {
+              sessionStorage.removeItem(k);
+            }
           }
+        } catch (e) {}
+
+        if (this.currentProfile) {
           this.currentProfile.photo_url = null;
           this.currentProfile.photo_drive_file_id = null;
           sessionStorage.setItem("PHT_USER_PROFILE", JSON.stringify(this.currentProfile));
+        }
+
+        // Reset UI immediately
+        const avatarZone = document.getElementById("student-avatar-click-zone");
+        if (avatarZone) {
+          const img = document.getElementById("student-profile-avatar-img");
+          if (img) img.remove();
+          if (!document.getElementById("student-profile-avatar-placeholder")) {
+            const ph = document.createElement("div");
+            ph.className = "student-avatar-placeholder";
+            ph.id = "student-profile-avatar-placeholder";
+            ph.innerHTML = '<i data-lucide="circle-user" style="width:40px;height:40px;color:var(--text-cyan)"></i>';
+            avatarZone.insertBefore(ph, avatarZone.firstChild);
+          }
+        }
+
+        const headerAvatar = document.getElementById("user-header-avatar");
+        if (headerAvatar) {
+          headerAvatar.innerHTML = "";
+          headerAvatar.style.display = "none";
         }
 
         this.closeProfilePhotoModal();

@@ -198,6 +198,24 @@ class SheetRepository {
   }
 
   saveStudent(student) {
+    if (this.isGasRuntime && this.spreadsheetId) {
+      try {
+        const ss = this.getGasSpreadsheet_();
+        const sheet = ss.getSheetByName("Students");
+        if (sheet) {
+          const lastCol = sheet.getLastColumn() || 1;
+          const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+          const needed = ["photo_drive_file_id", "photo_url"];
+          const missing = needed.filter(k => !headers.includes(k));
+          if (missing.length > 0) {
+            sheet.getRange(1, headers.length + 1, 1, missing.length).setValues([missing]);
+            sheet.getRange(1, headers.length + 1, 1, missing.length).setFontWeight("bold").setBackground("#eef3f9");
+          }
+        }
+      } catch (e) {
+        if (typeof Logger !== "undefined") Logger.log("Error verifying Students columns: " + e.message);
+      }
+    }
     this.upsertRowInTable("Students", s => s.student_uid === student.student_uid, student);
   }
 
