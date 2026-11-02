@@ -325,7 +325,8 @@ document.addEventListener("DOMContentLoaded", () => {
     checkAuth() {
       if (window.apiClient.isLoggedIn()) {
         const role = window.apiClient.getRole();
-        const profile = window.apiClient.getProfile();
+        const profile = window.apiClient.getProfile() || {};
+        this.currentProfile = profile;
         this.showLoggedInView(role, profile);
       } else {
         this.showLoginView();
@@ -343,6 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
 
     showLoggedInView(role, profile) {
+      this.currentProfile = profile;
       document.getElementById("view-auth").style.display = "none";
       document.getElementById("user-header-info").style.display = "flex";
 
@@ -351,14 +353,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const headerAvatar = document.getElementById("user-header-avatar");
       if (headerAvatar) {
-        if (profile && !profile.photo_url && profile.student_uid) {
-          try {
-            const cachedPhoto = localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.student_uid);
-            if (cachedPhoto) profile.photo_url = cachedPhoto;
-          } catch (e) {}
+        let avatarSrc = profile?.photo_url;
+        if (!avatarSrc && profile) {
+          avatarSrc = (profile.student_uid && localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.student_uid))
+            || (profile.code_5_digit && localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.code_5_digit))
+            || localStorage.getItem("PHT_PROFILE_PHOTO_LAST_UPLOADED");
+          if (avatarSrc) profile.photo_url = avatarSrc;
         }
-        if (profile && profile.photo_url) {
-          headerAvatar.innerHTML = `<img src="${profile.photo_url}" alt="Avatar">`;
+        if (avatarSrc) {
+          headerAvatar.innerHTML = `<img src="${avatarSrc}" alt="Avatar">`;
           headerAvatar.style.display = "inline-flex";
         } else {
           headerAvatar.innerHTML = "";
@@ -403,6 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (res.ok) {
           window.apiClient.setSession(res.data.session_token, res.data.profile);
+          this.currentProfile = res.data.profile;
           if (res.data.profile.grade) {
             this.currentGrade = res.data.profile.grade;
           }
@@ -524,22 +528,23 @@ document.addEventListener("DOMContentLoaded", () => {
     renderStudentDashboard(data) {
       const { profile, score_summary, worksheet_summary, worksheet_cards } = data;
       if (profile) {
+        this.currentProfile = profile;
         if (!profile.photo_url) {
           const cachedPhoto = (profile.student_uid && localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.student_uid))
             || (profile.code_5_digit && localStorage.getItem("PHT_PROFILE_PHOTO_" + profile.code_5_digit))
-            || (this.currentProfile && this.currentProfile.photo_url);
+            || localStorage.getItem("PHT_PROFILE_PHOTO_LAST_UPLOADED")
+            || (window.apiClient && window.apiClient.getProfile()?.photo_url);
           if (cachedPhoto) {
             profile.photo_url = cachedPhoto;
           }
         }
         if (profile.photo_url) {
-          if (this.currentProfile) {
-            this.currentProfile.photo_url = profile.photo_url;
-            sessionStorage.setItem("PHT_USER_PROFILE", JSON.stringify(this.currentProfile));
-          }
+          this.currentProfile.photo_url = profile.photo_url;
+          window.apiClient?.setSession(window.apiClient.sessionToken, profile);
           try {
             if (profile.student_uid) localStorage.setItem("PHT_PROFILE_PHOTO_" + profile.student_uid, profile.photo_url);
             if (profile.code_5_digit) localStorage.setItem("PHT_PROFILE_PHOTO_" + profile.code_5_digit, profile.photo_url);
+            localStorage.setItem("PHT_PROFILE_PHOTO_LAST_UPLOADED", profile.photo_url);
           } catch (e) {}
         }
       }
@@ -2325,20 +2330,21 @@ document.addEventListener("DOMContentLoaded", () => {
         if (textEl) textEl.textContent = "บันทึกรูปโปรไฟล์เรียบร้อยแล้ว!";
 
         const savedPhotoUrl = res.data?.photo_url || finalDataUrl;
-        const uid = this.currentProfile?.student_uid;
-        const code = this.currentProfile?.code_5_digit;
+        const profile = this.currentProfile || window.apiClient?.getProfile() || {};
+        this.currentProfile = profile;
+        const uid = profile.student_uid;
+        const code = profile.code_5_digit;
 
         // Persist photo in localStorage so it NEVER disappears across dashboard fetches
         try {
           if (uid) localStorage.setItem("PHT_PROFILE_PHOTO_" + uid, savedPhotoUrl);
           if (code) localStorage.setItem("PHT_PROFILE_PHOTO_" + code, savedPhotoUrl);
+          localStorage.setItem("PHT_PROFILE_PHOTO_LAST_UPLOADED", savedPhotoUrl);
         } catch (e) {}
 
-        if (this.currentProfile) {
-          this.currentProfile.photo_url = savedPhotoUrl;
-          this.currentProfile.photo_drive_file_id = res.data?.photo_drive_file_id || "drive_linked";
-          sessionStorage.setItem("PHT_USER_PROFILE", JSON.stringify(this.currentProfile));
-        }
+        this.currentProfile.photo_url = savedPhotoUrl;
+        this.currentProfile.photo_drive_file_id = res.data?.photo_drive_file_id || "drive_linked";
+        window.apiClient?.setSession(window.apiClient.sessionToken, this.currentProfile);
 
         // Invalidate stale dashboard SWR caches
         try {

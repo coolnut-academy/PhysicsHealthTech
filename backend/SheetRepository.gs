@@ -57,7 +57,18 @@ class SheetRepository {
       if (!sheet) return [];
       const data = sheet.getDataRange().getValues();
       if (!data || data.length < 2) return [];
-      const headers = data[0];
+      let headers = data[0];
+      // Auto-heal missing critical columns for Students table
+      if (tableName === "Students") {
+        const needed = ["photo_drive_file_id", "photo_url"];
+        const missing = needed.filter(k => !headers.includes(k));
+        if (missing.length > 0) {
+          const startCol = headers.length + 1;
+          sheet.getRange(1, startCol, 1, missing.length).setValues([missing]);
+          sheet.getRange(1, startCol, 1, missing.length).setFontWeight("bold").setBackground("#eef3f9");
+          headers = headers.concat(missing);
+        }
+      }
       const rows = [];
       for (let r = 1; r < data.length; r++) {
         const rowData = data[r];
