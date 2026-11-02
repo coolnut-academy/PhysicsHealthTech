@@ -24,7 +24,7 @@
 | Lifecycle & Grade Isolation Tests | **PASS** | Multi-Year Lifecycle, Grade Isolation & Roster Promotion | `node tests/test-lifecycle-and-isolation.js` |
 | Revision & Immutability Tests | **PASS** | Revision, Anti-Sabotage Immutability & Multi-Version History | `node tests/test-revision-immutability.js` |
 | Course Sessions & Snapshot Tests | **PASS** | 20 Course Sessions Schedule & Academic Year Snapshot Isolation | `node tests/integration/sessions-snapshot.test.js` |
-| Student Profile Photo & Drive Storage | **PASS** | Profile Photo Upload, Edit Pencil, Google Drive Storage & ID Linking | `node tests/integration/student-profile-photo.test.js` |
+| Student Profile Photo & Drive Storage | **PASS** | Profile Photo Upload, Edit Pencil, Interactive Cropper & ID Linking | `node tests/integration/student-profile-photo.test.js` |
 | UI & Performance Improvements | **PASS** | Mobile Responsive, Easy Upload, A4 Compression, Lucide Icons | `node tests/test-ui-improvements.js` |
 | **All Test Suites Combined** | **12/12 PASS** | **All 50+ Acceptance, Grading, Security, Lifecycle, Profile Photo & Drive Storage Cases** | `npm test` exit code 0 |
 
@@ -73,11 +73,11 @@
   - Teachers can edit all 20 sessions per year and grade, load recommended course defaults, and save snapshots.
   - Full Snapshot Isolation per academic year: year 2569 and year 2570 have independent curriculum snapshots; edits to one year never affect another.
   - Backend table 'SessionSnapshots' with schema migration, GAS repository integration, and offline local storage fallback.
-- [x] **Phase 7 (Student Profile Photo & Google Drive Integration):**
+- [x] **Phase 7 (Student Profile Photo, Interactive Cropper & Storage):**
   - Profile photo display as an integral part of the Student Dashboard banner and top navigation header.
   - Floating edit pencil button (`pencil` Lucide icon) on the avatar circle allowing easy photo change on both mobile and desktop.
-  - Full client-side automatic center-cropping to square and compression to JPEG 85% (~50-150 KB) for instantaneous uploads.
-  - Dedicated preview & upload modal with real-time image preview, file info, Drive connection status, and progress indicator.
+  - **Seamless Standard Profile Flow:** All technical mentions of "Google Drive" removed from user-facing text, notifications, and toasts (operates like standard profile picture selection and confirmation: "เลือกรูปภาพ" -> "ยืนยันรูปโปรไฟล์").
+  - **Interactive Image Cropper (`ImageCropper`):** Pure vanilla HTML5 canvas cropper with circular guide boundary, dark vignette mask, drag-to-pan with touch and mouse, smooth zoom slider + zoom buttons, 90° image rotation, reset button, and live preview.
   - Real Google Drive upload: stores file in `ProfilePhotos` subfolder in Drive Root (`1FKKFSYOfzwdRuehjG9Ha_6yoKbc4dMWs`), sets public view sharing, and trashes previous photo file when replaced.
   - Persistent database linkage: ties `photo_drive_file_id` and `photo_url` directly to `student_uid` and `code_5_digit` in Google Sheets `Students` table.
   - Server-side authorization check (Anti-IDOR): students can only update their own photo; unauthorized or non-image MIME types are strictly rejected.

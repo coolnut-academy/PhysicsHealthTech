@@ -2004,3 +2004,124 @@ body::after {
     height: 130px;
   }
 }
+
+/* ==========================================================================
+   IMAGE CROPPER TOOLBAR & VIEWPORT
+   ========================================================================== */
+
+.crop-viewport-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 6px auto;
+  position: relative;
+  background: #080c18;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-glass);
+  padding: 8px;
+  overflow: hidden;
+  max-width: 320px;
+}
+
+.crop-canvas {
+  width: 280px;
+  height: 280px;
+  border-radius: var(--radius-md);
+  cursor: grab;
+  touch-action: none;
+  display: block;
+}
+
+.crop-canvas:active {
+  cursor: grabbing;
+}
+
+.crop-controls-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid var(--border-glass);
+  border-radius: var(--radius-full);
+  padding: 6px 14px;
+  margin-top: 10px;
+  backdrop-filter: blur(10px);
+}
+
+.btn-crop-tool {
+  background: transparent;
+  border: none;
+  color: var(--text-cyan);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.btn-crop-tool:hover {
+  background: rgba(0, 240, 255, 0.15);
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.btn-crop-tool svg {
+  width: 16px;
+  height: 16px;
+}
+
+.crop-slider {
+  flex: 1;
+  max-width: 130px;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1e293b;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.crop-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--cyan-neon);
+  box-shadow: 0 0 8px var(--cyan-neon);
+  cursor: pointer;
+  border: 2px solid #0c1222;
+}
+
+.crop-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--cyan-neon);
+  box-shadow: 0 0 8px var(--cyan-neon);
+  cursor: pointer;
+  border: 2px solid #0c1222;
+}
+
+.crop-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-glass);
+  margin: 0 4px;
+}
+
+@media (max-width: 480px) {
+  .crop-canvas {
+    width: 250px;
+    height: 250px;
+  }
+  .crop-slider {
+    max-width: 90px;
+  }
+}

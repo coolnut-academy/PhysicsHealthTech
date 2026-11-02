@@ -1936,7 +1936,7 @@ const StudentService = {
         display_name: student.display_name,
         photo_url: student.photo_url,
         photo_drive_file_id: student.photo_drive_file_id,
-        message_th: "อัปโหลดรูปโปรไฟล์ลง Google Drive และบันทึกผูกกับรหัสนักเรียนสำเร็จเรียบร้อย"
+        message_th: "อัปเดตรูปโปรไฟล์สำเร็จเรียบร้อยแล้ว"
       }
     };
   },

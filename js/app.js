@@ -570,7 +570,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="student-profile-card">
           <div class="student-profile-main">
             <div class="student-avatar-container">
-              <div class="student-avatar-wrapper" id="student-avatar-click-zone" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์ (อัปโหลดลง Google Drive)">
+              <div class="student-avatar-wrapper" id="student-avatar-click-zone" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์">
                 ${avatarHtml}
                 <button type="button" class="student-avatar-edit-btn" id="btn-student-edit-avatar" title="แก้ไขรูปโปรไฟล์ (ดินสอ)" onclick="event.stopPropagation(); window.app.openProfilePhotoModal()">
                   <i data-lucide="pencil" style="width:14px;height:14px"></i>
@@ -2043,34 +2043,36 @@ document.addEventListener("DOMContentLoaded", () => {
       const codeEl = document.getElementById("modal-profile-code-label");
       if (codeEl) codeEl.textContent = profile.code_5_digit || "";
 
-      const imgPreview = document.getElementById("modal-profile-img-preview");
-      const placeholderPreview = document.getElementById("modal-profile-placeholder-preview");
+      const currentAvatar = document.getElementById("modal-profile-current-avatar");
+      const emptyAvatar = document.getElementById("modal-profile-empty-avatar");
       const btnRemove = document.getElementById("btn-modal-remove-photo");
       const btnSave = document.getElementById("btn-modal-save-photo");
-      const fileInfo = document.getElementById("modal-profile-file-info");
       const progressEl = document.getElementById("modal-profile-upload-progress");
       const fileInput = document.getElementById("input-student-profile-file");
+      const selView = document.getElementById("modal-profile-selection-view");
+      const cropView = document.getElementById("modal-profile-crop-view");
 
       if (fileInput) fileInput.value = "";
       if (progressEl) progressEl.style.display = "none";
+      if (selView) selView.style.display = "block";
+      if (cropView) cropView.style.display = "none";
       this.selectedProfilePhotoDataUrl = null;
+      this.activeCropImage = null;
 
       if (profile.photo_url) {
-        if (imgPreview) {
-          imgPreview.src = profile.photo_url;
-          imgPreview.style.display = "block";
+        if (currentAvatar) {
+          currentAvatar.src = profile.photo_url;
+          currentAvatar.style.display = "block";
         }
-        if (placeholderPreview) placeholderPreview.style.display = "none";
+        if (emptyAvatar) emptyAvatar.style.display = "none";
         if (btnRemove) btnRemove.style.display = "inline-flex";
-        if (fileInfo) fileInfo.textContent = "รูปโปรไฟล์ปัจจุบันของคุณ (คลิกที่รูปเพื่อเลือกไฟล์ใหม่)";
       } else {
-        if (imgPreview) {
-          imgPreview.src = "";
-          imgPreview.style.display = "none";
+        if (currentAvatar) {
+          currentAvatar.src = "";
+          currentAvatar.style.display = "none";
         }
-        if (placeholderPreview) placeholderPreview.style.display = "flex";
+        if (emptyAvatar) emptyAvatar.style.display = "flex";
         if (btnRemove) btnRemove.style.display = "none";
-        if (fileInfo) fileInfo.textContent = "ยังไม่มีรูปโปรไฟล์ (คลิกเพื่อเลือกไฟล์ภาพจากอุปกรณ์ของคุณ)";
       }
 
       if (btnSave) btnSave.disabled = true;
@@ -2084,6 +2086,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const modal = document.getElementById("modal-student-profile-photo");
       if (modal) modal.style.display = "none";
       this.selectedProfilePhotoDataUrl = null;
+      this.activeCropImage = null;
     },
 
     handleProfileFileSelected(event) {
@@ -2099,38 +2102,33 @@ document.addEventListener("DOMContentLoaded", () => {
       reader.onload = (e) => {
         const img = new Image();
         img.onload = () => {
-          const targetSize = Math.min(600, Math.max(img.width, img.height));
-          const canvas = document.createElement("canvas");
-          canvas.width = targetSize;
-          canvas.height = targetSize;
-          const ctx = canvas.getContext("2d");
-
-          const minDim = Math.min(img.width, img.height);
-          const sx = (img.width - minDim) / 2;
-          const sy = (img.height - minDim) / 2;
-
-          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, targetSize, targetSize);
-          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
-
-          this.selectedProfilePhotoDataUrl = compressedDataUrl;
+          this.activeCropImage = img;
           this.selectedProfileFileName = file.name;
 
-          const imgPreview = document.getElementById("modal-profile-img-preview");
-          const placeholderPreview = document.getElementById("modal-profile-placeholder-preview");
+          // Switch to interactive cropper view
+          const selView = document.getElementById("modal-profile-selection-view");
+          const cropView = document.getElementById("modal-profile-crop-view");
+          if (selView) selView.style.display = "none";
+          if (cropView) cropView.style.display = "block";
+
+          const canvas = document.getElementById("profile-crop-canvas");
+          if (!this.imageCropper) {
+            this.imageCropper = new ImageCropper(canvas, { cropSize: 220 });
+          }
+          this.imageCropper.loadImage(img);
+
+          // Reset zoom slider to 1
+          const zoomSlider = document.getElementById("crop-zoom-slider");
+          if (zoomSlider) zoomSlider.value = 1;
+
+          // Enable confirm button
           const btnSave = document.getElementById("btn-modal-save-photo");
-          const fileInfo = document.getElementById("modal-profile-file-info");
-
-          if (imgPreview) {
-            imgPreview.src = compressedDataUrl;
-            imgPreview.style.display = "block";
-          }
-          if (placeholderPreview) placeholderPreview.style.display = "none";
-
-          const sizeKb = Math.round(((compressedDataUrl.length * 3) / 4) / 1024);
-          if (fileInfo) {
-            fileInfo.innerHTML = "ไฟล์: <strong>" + file.name + "</strong> (~" + sizeKb + " KB) พร้อมบันทึกลง Google Drive";
-          }
           if (btnSave) btnSave.disabled = false;
+
+          // Update hidden img preview for compatibility
+          const imgPreview = document.getElementById("modal-profile-img-preview");
+          if (imgPreview) imgPreview.src = e.target.result;
+
           this.refreshIcons();
         };
         img.src = e.target.result;
@@ -2138,8 +2136,46 @@ document.addEventListener("DOMContentLoaded", () => {
       reader.readAsDataURL(file);
     },
 
+    onCropZoomChange(val) {
+      if (this.imageCropper) {
+        this.imageCropper.setZoom(parseFloat(val));
+      }
+    },
+
+    adjustCropZoom(delta) {
+      const slider = document.getElementById("crop-zoom-slider");
+      if (slider && this.imageCropper) {
+        let val = parseFloat(slider.value) + delta;
+        val = Math.max(1, Math.min(3, val));
+        slider.value = val;
+        this.imageCropper.setZoom(val);
+      }
+    },
+
+    rotateCropImage() {
+      if (this.imageCropper) {
+        this.imageCropper.rotate();
+      }
+    },
+
+    resetCropImage() {
+      if (this.imageCropper) {
+        this.imageCropper.reset();
+        const slider = document.getElementById("crop-zoom-slider");
+        if (slider) slider.value = 1;
+      }
+    },
+
     async uploadProfilePhotoConfirm() {
-      if (!this.selectedProfilePhotoDataUrl) return;
+      let finalDataUrl = null;
+
+      if (this.imageCropper && this.activeCropImage) {
+        finalDataUrl = this.imageCropper.getCroppedDataUrl(600, 0.88);
+      } else if (this.selectedProfilePhotoDataUrl) {
+        finalDataUrl = this.selectedProfilePhotoDataUrl;
+      }
+
+      if (!finalDataUrl) return;
 
       const btnSave = document.getElementById("btn-modal-save-photo");
       const progressEl = document.getElementById("modal-profile-upload-progress");
@@ -2148,25 +2184,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (btnSave) btnSave.disabled = true;
       if (progressEl) progressEl.style.display = "block";
-      if (fillEl) fillEl.style.width = "25%";
-      if (textEl) textEl.textContent = "กำลังเชื่อมต่อ Google Drive...";
+      if (fillEl) fillEl.style.width = "40%";
+      if (textEl) textEl.textContent = "กำลังประมวลผลรูปภาพ...";
 
       try {
-        if (fillEl) fillEl.style.width = "55%";
-        if (textEl) textEl.textContent = "กำลังอัปโหลดและผูกข้อมูลกับ Student ID...";
+        if (fillEl) fillEl.style.width = "75%";
+        if (textEl) textEl.textContent = "กำลังบันทึกรูปโปรไฟล์...";
 
         const res = await window.apiClient.call("student.uploadProfilePhoto", {
-          file_base64: this.selectedProfilePhotoDataUrl,
+          file_base64: finalDataUrl,
           mime_type: "image/jpeg",
           file_name: this.selectedProfileFileName || "profile.jpg"
         });
 
         if (!res.ok) {
-          throw new Error(res.error?.message_th || "อัปโหลดภาพไม่สำเร็จ");
+          throw new Error(res.error?.message_th || "บันทึกรูปภาพไม่สำเร็จ");
         }
 
         if (fillEl) fillEl.style.width = "100%";
-        if (textEl) textEl.textContent = "สำเร็จ!";
+        if (textEl) textEl.textContent = "บันทึกรูปโปรไฟล์เรียบร้อยแล้ว!";
 
         if (this.currentProfile) {
           this.currentProfile.photo_url = res.data.photo_url;
@@ -2177,10 +2213,10 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
           this.closeProfilePhotoModal();
           this.loadStudentDashboard();
-        }, 400);
+        }, 350);
 
       } catch (err) {
-        alert("เกิดข้อผิดพลาดในการอัปโหลด: " + err.message);
+        alert("เกิดข้อผิดพลาดในการบันทึก: " + err.message);
         if (btnSave) btnSave.disabled = false;
         if (progressEl) progressEl.style.display = "none";
       }
