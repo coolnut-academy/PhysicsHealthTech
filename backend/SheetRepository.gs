@@ -546,6 +546,84 @@ class SheetRepository {
     return this.fileStorage.get(driveFileId) || "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
   }
 
+  /**
+   * Save student profile photo to Google Drive
+   * - In GAS runtime: Creates file inside 'ProfilePhotos' subfolder in Drive Root
+   * - Sets sharing to ANYONE_WITH_LINK VIEW for web display
+   * - Generates direct display URL (lh3.googleusercontent.com/d/{fileId})
+   * - Trashes old profile photo if replaced
+   * - Linked to Student Code & UID
+   */
+  saveProfilePhotoToDrive(studentCode, studentUid, fileData) {
+    if (this.isGasRuntime && typeof DriveApp !== "undefined") {
+      try {
+        const rootFolderId = (typeof AppConfig !== "undefined") ? AppConfig.getDriveRootFolderId() : "";
+        const rootFolder = rootFolderId ? DriveApp.getFolderById(rootFolderId) : DriveApp.getRootFolder();
+        
+        let targetFolder = rootFolder;
+        try {
+          const subfolders = rootFolder.getFoldersByName("ProfilePhotos");
+          if (subfolders.hasNext()) {
+            targetFolder = subfolders.next();
+          } else {
+            targetFolder = rootFolder.createFolder("ProfilePhotos");
+          }
+        } catch (fErr) {
+          targetFolder = rootFolder;
+        }
+
+        const rawBase64 = (fileData.file_base64 || "").replace(/^data:image\/\w+;base64,/, "");
+        const decoded = Utilities.base64Decode(rawBase64);
+        const mimeType = fileData.mime_type || "image/jpeg";
+        const extension = mimeType === "image/png" ? ".png" : (mimeType === "image/webp" ? ".webp" : ".jpg");
+        const fileName = "profile_" + studentCode + "_" + studentUid + extension;
+        const blob = Utilities.newBlob(decoded, mimeType, fileName);
+
+        if (fileData.old_file_id && !fileData.old_file_id.startsWith("drv_")) {
+          try {
+            DriveApp.getFileById(fileData.old_file_id).setTrashed(true);
+          } catch (e) {}
+        }
+
+        const driveFile = targetFolder.createFile(blob);
+        try {
+          driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        } catch (sErr) {
+          if (typeof Logger !== "undefined") Logger.log("Notice: Set sharing: " + sErr.message);
+        }
+
+        const fileId = driveFile.getId();
+        const photoUrl = "https://lh3.googleusercontent.com/d/" + fileId;
+        return {
+          drive_file_id: fileId,
+          photo_url: photoUrl
+        };
+      } catch (err) {
+        if (typeof Logger !== "undefined") Logger.log("Drive profile upload error: " + err.message);
+        throw new Error("DRIVE_UPLOAD_FAILED: ไม่สามารถบันทึกภาพโปรไฟล์ลงใน Google Drive ได้ (" + err.message + ")");
+      }
+    }
+
+    if (!this.fileStorage) this.fileStorage = new Map();
+    const driveFileId = "drv_profile_" + studentCode + "_" + (typeof AuthService !== "undefined" ? AuthService.generateSecureToken().substring(0, 10) : Math.random().toString(16).substring(2, 10));
+    this.fileStorage.set(driveFileId, fileData.file_base64);
+    return {
+      drive_file_id: driveFileId,
+      photo_url: fileData.file_base64
+    };
+  }
+
+  deleteDriveFile(fileId) {
+    if (!fileId) return;
+    if (this.isGasRuntime && typeof DriveApp !== "undefined" && !fileId.startsWith("drv_")) {
+      try {
+        DriveApp.getFileById(fileId).setTrashed(true);
+      } catch (e) {}
+    } else if (this.fileStorage) {
+      this.fileStorage.delete(fileId);
+    }
+  }
+
   // Groups and Projects
   findGroupById(groupId) {
     const table = this.getTable("Groups");
@@ -618,6 +696,15 @@ class SheetRepository {
   findArtifactsByProjectAndKind(projectId, kind) {
     const table = this.getTable("ProjectArtifacts");
     return table.filter(a => a.project_id === projectId && a.artifact_kind === kind && !a.deleted_at);
+  }
+
+  findSessionSnapshot(academicYearId, grade) {
+    const table = this.getTable("SessionSnapshots");
+    return table.find(s => s.academic_year_id === academicYearId && s.grade === grade);
+  }
+
+  saveSessionSnapshot(snapshot) {
+    this.upsertRowInTable("SessionSnapshots", s => s.academic_year_id === snapshot.academic_year_id && s.grade === snapshot.grade, snapshot);
   }
 
   recordAuditLog(log) {

@@ -8,7 +8,7 @@ const SchemaMigrator = {
   SCHEMA_VERSION: "2.0.0",
 
   TAB_DEFINITIONS: {
-    Students: ["student_uid", "code_5_digit", "display_name", "status", "credential_version", "created_at", "updated_at", "deleted_at"],
+    Students: ["student_uid", "code_5_digit", "display_name", "status", "credential_version", "created_at", "updated_at", "deleted_at", "photo_drive_file_id", "photo_url"],
     StudentCredentials: ["credential_id", "student_uid", "verifier_alg", "salt", "verifier", "secret_version", "issued_at", "revoked_at"],
     Teachers: ["teacher_uid", "google_sub", "email_for_display", "name", "role", "status", "auth_secret", "created_at"],
     Sessions: ["session_id", "principal_type", "principal_uid", "role", "token_hash", "issued_at", "last_seen_at", "expires_at", "revoked_at"],
@@ -34,6 +34,7 @@ const SchemaMigrator = {
     BonusAwards: ["bonus_id", "syllabus_version_id", "student_uid", "bonus_kind", "source_worksheet_code", "points_int", "state", "approved_by", "note", "created_at"],
     GroupScoreComponents: ["group_score_id", "group_id", "task_code", "component_id", "shared_points_int", "member_snapshot_id", "teacher_uid", "state", "created_at"],
     IndividualScoreComponents: ["score_component_id", "student_uid", "task_code", "component_id", "points_int", "state"],
+    SessionSnapshots: ["snapshot_id", "academic_year_id", "grade", "version_no", "sessions_json", "created_at", "updated_at", "updated_by_uid"],
     Operations: ["operation_id", "actor_uid", "action", "target_type", "target_id", "idempotency_key_hash", "state", "created_at"],
     AuditLogs: ["audit_id", "actor_type", "actor_uid", "action", "object_type", "object_id", "outcome", "change_summary", "at"]
   },
@@ -67,7 +68,16 @@ const SchemaMigrator = {
           sheet.setFrozenRows(1);
           results.push(`Updated headers for tab ${tabName}`);
         } else {
-          results.push(`Tab ${tabName} already exists`);
+          // Detect and append any missing columns (e.g. photo_drive_file_id, photo_url)
+          const missingHeaders = headers.filter(h => !existingHeaders.includes(h));
+          if (missingHeaders.length > 0) {
+            const startCol = existingHeaders.length + 1;
+            sheet.getRange(1, startCol, 1, missingHeaders.length).setValues([missingHeaders]);
+            sheet.getRange(1, startCol, 1, missingHeaders.length).setFontWeight("bold").setBackground("#eef3f9");
+            results.push(`Appended missing columns [${missingHeaders.join(", ")}] to tab ${tabName}`);
+          } else {
+            results.push(`Tab ${tabName} already exists`);
+          }
         }
       }
     }
@@ -83,4 +93,3 @@ const SchemaMigrator = {
 if (typeof module !== "undefined" && module.exports) {
   module.exports = SchemaMigrator;
 }
-

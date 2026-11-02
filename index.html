@@ -40,6 +40,7 @@
     <div class="header-actions">
       <!-- User Profile Tag -->
       <div id="user-header-info" class="user-badge" style="display:none">
+        <div id="user-header-avatar" class="user-header-avatar" style="display:none"></div>
         <span id="user-display-name">สมชาย มั่นใจ</span>
         <span id="user-role-tag" class="role-tag">STUDENT</span>
         <button id="btn-logout" class="btn btn-secondary btn-sm" title="ออกจากระบบ"><i data-lucide="log-out"></i> ออกจากระบบ</button>
@@ -168,8 +169,20 @@
         </div>
       </div>
 
-      <!-- Filter Chips & Section Header -->
-      <div class="worksheets-section-header">
+      <!-- Main Student Feature Navigation Tabs -->
+      <div class="portal-main-tabs">
+        <button id="btn-student-tab-worksheets" class="portal-tab-btn active" onclick="window.app.switchStudentTab('worksheets')">
+          <i data-lucide="folder-kanban"></i> <span>ใบงานปฏิบัติการ (1 - 9)</span>
+        </button>
+        <button id="btn-student-tab-sessions" class="portal-tab-btn" onclick="window.app.switchStudentTab('sessions')">
+          <i data-lucide="calendar-days"></i> <span>ตารางแผนการเรียน (ครั้งที่ 1 - 20)</span>
+        </button>
+      </div>
+
+      <!-- Tab 1 Content: Worksheets -->
+      <div id="student-tab-worksheets-content">
+        <!-- Filter Chips & Section Header -->
+        <div class="worksheets-section-header">
         <h3 style="font-family:var(--font-hud);font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px">
           <i data-lucide="folder-kanban" style="color:var(--cyan-neon)"></i> รายการใบงานปฏิบัติการ (ใบงานที่ 1 - 9)
         </h3>
@@ -183,17 +196,40 @@
       </div>
 
       <!-- 9 Worksheets Grid -->
-      <div id="student-worksheets-container" class="worksheet-grid"></div>
+        <div id="student-worksheets-container" class="worksheet-grid"></div>
+      </div>
+
+      <!-- Tab 2 Content: 20 Sessions Plan -->
+      <div id="student-tab-sessions-content" style="display:none">
+        <div class="sessions-section-header">
+          <div>
+            <h3 style="font-family:var(--font-hud);font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px;color:#fff">
+              <i data-lucide="calendar-days" style="color:var(--cyan-neon)"></i> ตารางแผนการเรียนรู้รายครั้ง (20 ครั้ง)
+            </h3>
+            <div style="font-size:13px;color:var(--text-muted);margin-top:2px">
+              รายละเอียดเนื้อหา หัวข้อการเรียนรู้ และปฏิบัติการแต่ละครั้ง ประจำ<span id="student-sessions-year-label" style="color:var(--text-cyan);font-weight:600"></span>
+            </div>
+          </div>
+          <!-- Quick search bar -->
+          <div style="position:relative;min-width:240px">
+            <input type="text" id="student-session-search" class="form-control" placeholder="ค้นหาครั้งที่, หัวข้อเรื่อง..." oninput="window.app.filterStudentSessions(this.value)" style="font-size:13px;padding-left:36px;min-height:38px">
+            <i data-lucide="search" style="position:absolute;left:11px;top:11px;width:16px;height:16px;color:var(--text-dim);pointer-events:none"></i>
+          </div>
+        </div>
+
+        <!-- Sessions Timeline / List Grid -->
+        <div id="student-sessions-container" class="sessions-grid"></div>
+      </div>
     </section>
 
     <!-- 3. TEACHER WORKSPACE VIEW -->
     <section id="view-teacher-workspace" style="display:none">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:14px">
         <div>
           <h2 style="font-family:var(--font-hud);font-size:22px;font-weight:700;color:#fff">
-            สมุดบันทึกคะแนนและตรวจงาน (TEACHER GRADEBOOK)
+            ระบบจัดการสำหรับครูผู้สอน (TEACHER CONSOLE)
           </h2>
-          <div style="font-size:13px;color:var(--text-muted)">ตรวจหลักฐาน ให้คะแนนรายภารกิจ รายบุคคลและห้องเรียน</div>
+          <div style="font-size:13px;color:var(--text-muted)">ตรวจหลักฐาน ให้คะแนน และจัดการแผนการเรียนรู้รายครั้ง (20 ครั้ง)</div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button id="btn-download-template" class="btn btn-secondary btn-sm" title="ดาวน์โหลดไฟล์แม่แบบ CSV สำหรับกรอกข้อมูลนักเรียน"><i data-lucide="download"></i> โหลดเทมเพลต (CSV)</button>
@@ -202,7 +238,19 @@
         </div>
       </div>
 
-      <!-- Filters Bar -->
+      <!-- Teacher Workspace Main Tabs -->
+      <div class="portal-main-tabs" style="margin-bottom:20px">
+        <button id="btn-teacher-tab-gradebook" class="portal-tab-btn active" onclick="window.app.switchTeacherTab('gradebook')">
+          <i data-lucide="clipboard-check"></i> <span>สมุดบันทึกคะแนนและตรวจงาน</span>
+        </button>
+        <button id="btn-teacher-tab-sessions" class="portal-tab-btn" onclick="window.app.switchTeacherTab('sessions')">
+          <i data-lucide="calendar-cog"></i> <span>จัดการแผนการเรียนรู้รายครั้ง (20 ครั้ง) — Snapshot รายปี</span>
+        </button>
+      </div>
+
+      <!-- Tab 1: Gradebook Content -->
+      <div id="teacher-tab-gradebook-content">
+        <!-- Filters Bar -->
       <div class="card" style="padding:16px 20px;margin-bottom:20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
         <div>
           <label style="font-family:var(--font-hud);font-size:12px;font-weight:600;color:var(--text-cyan);display:block;margin-bottom:4px">ปีการศึกษา:</label>
@@ -232,10 +280,132 @@
       </div>
 
       <!-- Gradebook Matrix Container -->
-      <div id="teacher-matrix-wrapper"></div>
+        <div id="teacher-matrix-wrapper"></div>
+      </div>
+
+      <!-- Tab 2: Sessions Manager Content -->
+      <div id="teacher-tab-sessions-content" style="display:none">
+        <!-- Top Session Plan Control Bar -->
+        <div class="card" style="padding:16px 20px;margin-bottom:18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          <div>
+            <label style="font-family:var(--font-hud);font-size:12px;font-weight:600;color:var(--text-cyan);display:block;margin-bottom:4px">ปีการศึกษา:</label>
+            <select id="teacher-session-year-select" class="form-control" style="min-height:38px;padding:4px 12px;width:160px;font-family:var(--font-hud)" onchange="window.app.onTeacherSessionFilterChange()">
+              <option value="yr_2569" selected>ปีการศึกษา 2569</option>
+              <option value="yr_2570">ปีการศึกษา 2570</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-family:var(--font-hud);font-size:12px;font-weight:600;color:var(--text-cyan);display:block;margin-bottom:4px">ระดับชั้น:</label>
+            <select id="teacher-session-grade-select" class="form-control" style="min-height:38px;padding:4px 12px;width:160px;font-family:var(--font-hud)" onchange="window.app.onTeacherSessionFilterChange()">
+              <option value="M4" selected>มัธยมศึกษาปีที่ 4</option>
+              <option value="M5">มัธยมศึกษาปีที่ 5</option>
+            </select>
+          </div>
+          <div style="margin-left:auto;display:flex;gap:10px;flex-wrap:wrap">
+            <button id="btn-load-default-sessions" class="btn btn-secondary btn-sm" onclick="window.app.loadTeacherDefaultSessions()" title="โหลดเนื้อหาเทมเพลตมาตรฐาน 20 ครั้ง"><i data-lucide="rotate-ccw"></i> โหลดแผนเริ่มต้น</button>
+            <button id="btn-save-sessions-top" class="btn btn-primary btn-sm" onclick="window.app.saveTeacherSessionsSnapshot()"><i data-lucide="save"></i> บันทึก Snapshot รายปี</button>
+          </div>
+        </div>
+
+        <!-- Snapshot Info Banner -->
+        <div class="upload-guideline-box" style="margin-bottom:18px">
+          <div style="font-weight:700;color:var(--text-cyan);margin-bottom:4px;display:flex;align-items:center;gap:6px">
+            <i data-lucide="info" style="width:16px;height:16px"></i> ระบบบันทึก Snapshot รายปีการศึกษา:
+          </div>
+          <div>• ข้อมูลการสอนทั้ง 20 ครั้งจะถูกบันทึกแยกเป็น Snapshot เฉพาะปีการศึกษาและระดับชั้นที่เลือก ทำให้แต่ละปีการศึกษามีรายละเอียดการสอนไม่เหมือนกันได้</div>
+          <div>• นักเรียนในแต่ละปีการศึกษาจะเห็นข้อมูลตามที่คุณครูกรอกไว้ของปีนั้นๆ เมื่อแก้ไขเสร็จอย่าลืมกดปุ่ม <b>"บันทึก Snapshot รายปี"</b></div>
+          <div id="teacher-snapshot-status-pill" style="margin-top:6px;font-size:12px;color:var(--text-dim)">
+            สถานะ Snapshot: <span id="teacher-snapshot-status-text" style="color:var(--emerald-bio);font-weight:600">แผนเริ่มต้นมาตรฐาน (พร้อมแก้ไข)</span>
+          </div>
+        </div>
+
+        <!-- 20 Sessions Form Grid -->
+        <div id="teacher-sessions-editor-container" class="sessions-editor-grid"></div>
+
+        <!-- Bottom Save Button -->
+        <div style="margin-top:20px;padding:16px;background:var(--bg-card);border:1px solid var(--border-glass);border-radius:var(--radius-lg);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
+          <div style="font-size:13px;color:var(--text-muted)">
+            <i data-lucide="check-circle" style="color:var(--emerald-bio);vertical-align:middle;margin-right:4px"></i> ครบถ้วน 20 ครั้งการเรียนรู้ (ครั้งละ 100 นาที)
+          </div>
+          <button id="btn-save-sessions-bottom" class="btn btn-primary" onclick="window.app.saveTeacherSessionsSnapshot()">
+            <i data-lucide="save"></i> บันทึก Snapshot แผนการเรียน 20 ครั้ง
+          </button>
+        </div>
+      </div>
     </section>
 
   </main>
+
+  <!-- MODAL: STUDENT PROFILE PHOTO UPLOAD / EDIT -->
+  <div id="modal-student-profile-photo" class="modal-overlay" style="display:none">
+    <div class="modal-content" style="max-width:440px">
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title" style="display:flex;align-items:center;gap:8px">
+            <i data-lucide="circle-user" style="color:var(--cyan-neon)"></i> รูปโปรไฟล์นักเรียน
+          </h3>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
+            อัปโหลดลง Google Drive ผูกกับรหัสนักเรียน <span id="modal-profile-code-label" style="font-family:var(--font-mono);color:var(--cyan-neon);font-weight:700"></span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="window.app.closeProfilePhotoModal()"><i data-lucide="x"></i></button>
+      </div>
+
+      <div class="modal-body" style="text-align:center;padding:24px 16px">
+        <!-- Hidden file input -->
+        <input type="file" id="input-student-profile-file" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="window.app.handleProfileFileSelected(event)">
+
+        <!-- Avatar preview circle with hover indicator -->
+        <div class="modal-profile-preview-wrapper">
+          <div class="modal-profile-preview-ring" id="modal-profile-preview-ring" onclick="document.getElementById('input-student-profile-file').click()" title="คลิกเพื่อเลือกไฟล์รูปภาพ">
+            <img id="modal-profile-img-preview" src="" alt="Profile Preview" style="display:none" class="modal-profile-img">
+            <div id="modal-profile-placeholder-preview" class="modal-profile-placeholder">
+              <i data-lucide="camera" style="width:38px;height:38px;color:var(--text-cyan);margin-bottom:6px"></i>
+              <span style="font-size:12px;color:var(--text-muted);font-weight:500">คลิกเพื่อเลือกรูป</span>
+            </div>
+            <div class="modal-profile-pencil-badge" title="เลือกรูปภาพ">
+              <i data-lucide="pencil" style="width:14px;height:14px"></i>
+            </div>
+          </div>
+        </div>
+
+        <div id="modal-profile-file-info" style="font-size:12px;color:var(--text-muted);margin-top:12px">
+          รองรับไฟล์ JPG, PNG, WEBP (ระบบปรับขนาดและบีบอัดอัตโนมัติ)
+        </div>
+
+        <!-- Google Drive connection badge -->
+        <div style="margin-top:10px;padding:8px 12px;background:rgba(0,240,255,0.06);border:1px solid rgba(0,240,255,0.2);border-radius:var(--radius-md);display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--text-cyan)">
+          <i data-lucide="cloud-upload" style="width:15px;height:15px;color:var(--cyan-neon)"></i>
+          <span>บันทึกไฟล์ลง Google Drive อัตโนมัติ</span>
+        </div>
+
+        <!-- Upload Progress indicator -->
+        <div id="modal-profile-upload-progress" style="display:none;margin-top:16px">
+          <div class="progress-bar-container" style="height:8px">
+            <div id="modal-profile-progress-fill" class="progress-bar-fill" style="width:0%"></div>
+          </div>
+          <div id="modal-profile-progress-text" style="font-size:12px;color:var(--cyan-neon);margin-top:6px;font-family:var(--font-mono)">กำลังอัปโหลดไปยัง Google Drive...</div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <button type="button" id="btn-modal-remove-photo" class="btn btn-secondary btn-sm" style="display:none;color:var(--crimson-alert);border-color:rgba(244,63,94,0.3)" onclick="window.app.removeProfilePhoto()">
+            <i data-lucide="trash-2"></i> ลบรูป
+          </button>
+        </div>
+        <div style="display:flex;gap:10px;margin-left:auto">
+          <button type="button" class="btn btn-secondary" onclick="window.app.closeProfilePhotoModal()">ยกเลิก</button>
+          <button type="button" class="btn btn-outline" onclick="document.getElementById('input-student-profile-file').click()">
+            <i data-lucide="folder-open"></i> เลือกรูป
+          </button>
+          <button type="button" id="btn-modal-save-photo" class="btn btn-primary" onclick="window.app.uploadProfilePhotoConfirm()" disabled>
+            <i data-lucide="upload"></i> บันทึกลง Drive
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL: UPLOAD EVIDENCE (STUDENT MOBILE-FIRST EASY UPLOAD) -->
   <div id="modal-upload" class="modal-overlay" style="display:none">

@@ -13,12 +13,14 @@ const runStudentDashboardTests = require("./integration/student-dashboard.test")
 const runTeacherGradebookTests = require("./integration/teacher-gradebook.test");
 const runLifecycleAndIsolationTests = require("./test-lifecycle-and-isolation");
 const runRevisionImmutabilityTests = require("./test-revision-immutability");
+const runSessionsSnapshotTests = require("./integration/sessions-snapshot.test");
+const runStudentProfilePhotoTests = require("./integration/student-profile-photo.test");
 
 console.log("===============================================================");
 console.log("     PhysicsHealthTech V2.0 - Comprehensive Test Suite         ");
 console.log("===============================================================\n");
 
-let totalSuites = 10;
+let totalSuites = 12;
 let passedSuites = 0;
 
 try {
@@ -49,6 +51,12 @@ try {
   runRevisionImmutabilityTests();
   passedSuites++;
 
+  runSessionsSnapshotTests();
+  passedSuites++;
+
+  runStudentProfilePhotoTests();
+  passedSuites++;
+
   console.log("▶ Running UI, Mobile & A4 Compression Checks...");
   require("./test-ui-improvements");
   passedSuites++;
@@ -64,6 +72,8 @@ try {
   console.log("  - DATA01, DATA02, DATA05, DATA06, DATA07, DATA10");
   console.log("  - Multi-Year Lifecycle, Grade Isolation & Roster Promotion");
   console.log("  - Revision, Anti-Sabotage Immutability & Multi-Version History");
+  console.log("  - 20 Course Sessions Schedule & Academic Year Snapshot Isolation");
+  console.log("  - Student Profile Photo, Edit Pencil, Google Drive Storage & ID Linking");
   console.log("===============================================================\n");
   process.exit(0);
 

@@ -111,6 +111,7 @@ const TeacherService = {
         roll_no: Number(enr.roll_no),
         code_5_digit: student.code_5_digit,
         display_name: student.display_name,
+        photo_url: student.photo_url || null,
         room: enr.room,
         submitted_count: submittedCount,
         graded_count: gradedCount,

@@ -216,6 +216,8 @@ const AuthService = {
           code_5_digit: student.code_5_digit,
           display_name: student.display_name,
           role: "student",
+          photo_url: student.photo_url || null,
+          photo_drive_file_id: student.photo_drive_file_id || null,
           grade: activeEnr ? activeEnr.grade : "M4",
           room: activeEnr ? activeEnr.room : "1",
           roll_no: activeEnr ? activeEnr.roll_no : null,

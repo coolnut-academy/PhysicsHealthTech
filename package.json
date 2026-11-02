@@ -6,6 +6,7 @@
   "scripts": {
     "bundle": "node scripts/bundle-backend.js",
     "test": "node tests/run-all-tests.js",
+    "audit": "node scripts/audit-system.js",
     "test:unit": "node tests/unit/grading-engine.test.js && node tests/unit/syllabus-validator.test.js && node tests/unit/auth-security.test.js && node tests/unit/sanitization.test.js",
     "test:security": "node tests/security/idor-negative.test.js",
     "test:integration": "node tests/integration/student-dashboard.test.js && node tests/integration/teacher-gradebook.test.js"
@@ -21,4 +22,3 @@
   "license": "UNLICENSED",
   "private": true
 }
-

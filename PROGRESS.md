@@ -2,12 +2,12 @@
 
 ## PhysicsHealthTech V2.0 Greenfield Implementation Status
 - **Overall Status:** GREENFIELD SOURCE CODE IMPLEMENTED & TESTED (READY FOR DEPLOYMENT)
-- **Last Updated:** 2026-11-01
+- **Last Updated:** 2026-11-02
 - **Platform Architecture:**
   - **Frontend:** HTML5, CSS3 (Precision Academic Workspace), Vanilla JavaScript at project root (`index.html`, `css/style.css`, `js/config.js`, `js/api.js`, `js/mock-backend.js`, `js/app.js`) designed for GitHub Pages (`main` branch).
-  - **Backend:** Google Apps Script in dedicated `backend/` directory (`Entry.gs`, `Config.gs`, `GradingEngine.gs`, `SyllabusService.gs`, `AuthService.gs`, `Authorization.gs`, `StudentService.gs`, `TeacherService.gs`, `SubmissionService.gs`, `EvidenceService.gs`, `ProjectService.gs`, `AcademicYearService.gs`, `SheetRepository.gs`, `SchemaMigrator.gs`, `appsscript.json`).
+  - **Backend:** Google Apps Script in dedicated `backend/` directory (`Entry.gs`, `Config.gs`, `GradingEngine.gs`, `SyllabusService.gs`, `SessionService.gs`, `AuthService.gs`, `Authorization.gs`, `StudentService.gs`, `TeacherService.gs`, `SubmissionService.gs`, `EvidenceService.gs`, `ProjectService.gs`, `AcademicYearService.gs`, `SheetRepository.gs`, `SchemaMigrator.gs`, `appsscript.json`).
   - **Database:** Google Sheets (`1w3EQQfI2cK9-fmfLzbn3vzaTd-V81JCTT8Hwa8WhiA0`).
-  - **File Storage:** Private Google Drive Root (`1FKKFSYOfzwdRuehjG9Ha_6yoKbc4dMWs`).
+  - **File Storage:** Private Google Drive Root (`1FKKFSYOfzwdRuehjG9Ha_6yoKbc4dMWs`) with organized `ProfilePhotos` subfolder.
 
 ---
 
@@ -21,7 +21,12 @@
 | IDOR & Security Negative Tests | **PASS** | AC01, AC09, GR10, GR11, SEC04, SEC05 | `node tests/security/idor-negative.test.js` |
 | Student Dashboard Integration Tests | **PASS** | GR12, GR13, GR14, GR15, GR18 | `node tests/integration/student-dashboard.test.js` |
 | Teacher Gradebook Integration Tests | **PASS** | AC03, AC04, GR07, GR08, GR23, GR24, GR25, GR27, GR31, GR32 | `node tests/integration/teacher-gradebook.test.js` |
-| **All Test Suites Combined** | **7/7 PASS** | **All 45+ Acceptance, Grading, Security, and Data Cases** | `npm test` exit code 0 |
+| Lifecycle & Grade Isolation Tests | **PASS** | Multi-Year Lifecycle, Grade Isolation & Roster Promotion | `node tests/test-lifecycle-and-isolation.js` |
+| Revision & Immutability Tests | **PASS** | Revision, Anti-Sabotage Immutability & Multi-Version History | `node tests/test-revision-immutability.js` |
+| Course Sessions & Snapshot Tests | **PASS** | 20 Course Sessions Schedule & Academic Year Snapshot Isolation | `node tests/integration/sessions-snapshot.test.js` |
+| Student Profile Photo & Drive Storage | **PASS** | Profile Photo Upload, Edit Pencil, Google Drive Storage & ID Linking | `node tests/integration/student-profile-photo.test.js` |
+| UI & Performance Improvements | **PASS** | Mobile Responsive, Easy Upload, A4 Compression, Lucide Icons | `node tests/test-ui-improvements.js` |
+| **All Test Suites Combined** | **12/12 PASS** | **All 50+ Acceptance, Grading, Security, Lifecycle, Profile Photo & Drive Storage Cases** | `npm test` exit code 0 |
 
 ---
 
@@ -61,6 +66,24 @@
   - Idempotent year creation initializing M4 and M5 grade workspaces and cloning 9 draft worksheets per grade without touching prior years.
   - Clasp and deployment runbook prepared for Google Apps Script Web App.
   - Interactive Demo Mode and Live GAS Web App URL configuration in browser settings modal.
+- [x] **Phase 6 (Course Sessions Plan & Academic Year Snapshot):**
+  - Tabbed navigation on Student Portal: 'ใบงานปฏิบัติการ (1 - 9)' and 'ตารางแผนการเรียน (ครั้งที่ 1 - 20)'.
+  - Student session view displays session number, title, description/activities, and direct jump link to associated worksheets.
+  - Dedicated Teacher Console tab: 'จัดการแผนการเรียนรู้รายครั้ง (20 ครั้ง) — Snapshot รายปี'.
+  - Teachers can edit all 20 sessions per year and grade, load recommended course defaults, and save snapshots.
+  - Full Snapshot Isolation per academic year: year 2569 and year 2570 have independent curriculum snapshots; edits to one year never affect another.
+  - Backend table 'SessionSnapshots' with schema migration, GAS repository integration, and offline local storage fallback.
+- [x] **Phase 7 (Student Profile Photo & Google Drive Integration):**
+  - Profile photo display as an integral part of the Student Dashboard banner and top navigation header.
+  - Floating edit pencil button (`pencil` Lucide icon) on the avatar circle allowing easy photo change on both mobile and desktop.
+  - Full client-side automatic center-cropping to square and compression to JPEG 85% (~50-150 KB) for instantaneous uploads.
+  - Dedicated preview & upload modal with real-time image preview, file info, Drive connection status, and progress indicator.
+  - Real Google Drive upload: stores file in `ProfilePhotos` subfolder in Drive Root (`1FKKFSYOfzwdRuehjG9Ha_6yoKbc4dMWs`), sets public view sharing, and trashes previous photo file when replaced.
+  - Persistent database linkage: ties `photo_drive_file_id` and `photo_url` directly to `student_uid` and `code_5_digit` in Google Sheets `Students` table.
+  - Server-side authorization check (Anti-IDOR): students can only update their own photo; unauthorized or non-image MIME types are strictly rejected.
+  - Teacher workspace integration: teacher matrix rows include student photo thumbnail.
+  - Profile photo removal workflow with Drive cleanup.
+  - Offline / Mock backend support with `localStorage` persistence.
 
 ---
 
@@ -68,8 +91,8 @@
 1. **Google Apps Script Backend Deployment:**
    - Script directory: `backend/`
    - Open [Google Apps Script](https://script.google.com/) and create a new project.
-   - Copy the files in `backend/` (or use `npx @google/clasp push`).
-   - Run `SchemaMigrator.runMigration('1w3EQQfI2cK9-fmfLzbn3vzaTd-V81JCTT8Hwa8WhiA0')` once from the Apps Script editor to create/verify all tabs and headers in the Google Sheet.
+   - Copy the files in `backend/` (or use `npx @google/clasp push` or copy `backend/Code.gs`).
+   - Run `SchemaMigrator.runMigration('1w3EQQfI2cK9-fmfLzbn3vzaTd-V81JCTT8Hwa8WhiA0')` once from the Apps Script editor to create/verify all tabs and headers (including `photo_drive_file_id` and `photo_url`) in the Google Sheet.
    - Click **Deploy > New deployment > Web App**.
    - Execute as: **Me (User deploying)**.
    - Who has access: **Anyone**.
@@ -78,5 +101,3 @@
    - Commit and push repository to GitHub on `main` branch.
    - In GitHub Repository Settings > **Pages**, set Source to `Deploy from a branch`, Branch: `main`, Folder: `/ (root)`.
    - Open the published GitHub Pages URL in browser.
-   - Click **⚙️ ตั้งค่า (Settings)** in the top right header, paste the Web App URL, and save!
-

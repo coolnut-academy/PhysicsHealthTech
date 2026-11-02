@@ -21,6 +21,7 @@ const fileOrder = [
   "ProjectService.gs",
   "AcademicYearService.gs",
   "SyllabusService.gs",
+  "SessionService.gs",
   "TeacherService.gs",
   "Entry.gs"
 ];

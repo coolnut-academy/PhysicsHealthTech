@@ -16,6 +16,10 @@ document.addEventListener("DOMContentLoaded", () => {
     selectedUploadFiles: [], // Array of { name, mime, base64, size, width, height, origSize, savedPercent }
     gradingContext: null,
     _progressTimer: null,
+    studentActiveTab: "worksheets",
+    teacherActiveTab: "gradebook",
+    studentSessions: [],
+    teacherSessions: [],
 
     init() {
       this.initPhysicsBackground();
@@ -345,6 +349,17 @@ document.addEventListener("DOMContentLoaded", () => {
       const nameEl = document.getElementById("user-display-name");
       const roleEl = document.getElementById("user-role-tag");
 
+      const headerAvatar = document.getElementById("user-header-avatar");
+      if (headerAvatar) {
+        if (profile && profile.photo_url) {
+          headerAvatar.innerHTML = `<img src="${profile.photo_url}" alt="Avatar">`;
+          headerAvatar.style.display = "inline-flex";
+        } else {
+          headerAvatar.innerHTML = "";
+          headerAvatar.style.display = "none";
+        }
+      }
+
       if (role === "teacher" || role === "admin") {
         nameEl.textContent = profile.name || profile.email;
         roleEl.textContent = "TEACHER";
@@ -542,30 +557,80 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
 
-      // Profile banner
+      // Profile banner with student avatar and edit pencil button
       const banner = document.getElementById("student-profile-banner");
-      if (profile.is_out_of_roster) {
-        banner.innerHTML = `
-          <div style="background:rgba(245,158,11,0.18);color:#fbbf24;border:1px solid rgba(245,158,11,0.4);padding:12px 16px;border-radius:var(--radius-lg);margin-bottom:16px;font-weight:600;display:flex;align-items:center;gap:10px">
-            <i data-lucide="alert-triangle" style="width:20px;height:20px;color:#fbbf24"></i>
-            <span>คุณกำลังดูระดับชั้น ${profile.grade} ปี ${profile.year_be} (ส่งงานได้ แต่ไม่ได้อยู่ในบัญชีรายชื่อทางการของห้องเรียนนี้)</span>
-          </div>
-        `;
-      } else {
-        banner.innerHTML = `
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;background:var(--bg-card);border:1px solid var(--border-glass);padding:14px 18px;border-radius:var(--radius-xl);backdrop-filter:blur(14px)">
-            <div>
-              <div style="font-family:var(--font-hud);font-size:11px;color:var(--text-cyan);letter-spacing:1px;margin-bottom:2px">STUDENT PROFILE</div>
-              <h2 style="font-size:20px;font-weight:700;color:#fff">${profile.display_name}</h2>
-              <div style="font-size:12px;color:var(--text-muted);margin-top:2px;font-family:var(--font-thai)">
-                รหัส <span style="font-family:var(--font-mono);color:var(--cyan-neon)">${profile.code_5_digit}</span> | ม.${profile.grade === "M4" ? "4" : "5"}/${profile.room || "-"} เลขที่ ${profile.roll_no || "-"} | ปีการศึกษา ${profile.year_be}
+      const hasPhoto = Boolean(profile.photo_url);
+      const avatarHtml = hasPhoto
+        ? `<img src="${profile.photo_url}" alt="Profile Photo" class="student-avatar-img" id="student-profile-avatar-img">`
+        : `<div class="student-avatar-placeholder" id="student-profile-avatar-placeholder">
+             <i data-lucide="circle-user" style="width:40px;height:40px;color:var(--text-cyan)"></i>
+           </div>`;
+
+      banner.innerHTML = `
+        <div class="student-profile-card">
+          <div class="student-profile-main">
+            <div class="student-avatar-container">
+              <div class="student-avatar-wrapper" id="student-avatar-click-zone" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์ (อัปโหลดลง Google Drive)">
+                ${avatarHtml}
+                <button type="button" class="student-avatar-edit-btn" id="btn-student-edit-avatar" title="แก้ไขรูปโปรไฟล์ (ดินสอ)" onclick="event.stopPropagation(); window.app.openProfilePhotoModal()">
+                  <i data-lucide="pencil" style="width:14px;height:14px"></i>
+                </button>
               </div>
             </div>
-            <div>
-              <span class="status-badge status-submitted" style="font-family:var(--font-thai)">ปีการศึกษา ${profile.year_be}</span>
+            <div class="student-profile-info">
+              <div class="student-profile-hud-tag">
+                <span class="hud-pulse-dot"></span>
+                <span>STUDENT PROFILE</span>
+              </div>
+              <h2 class="student-profile-name">${profile.display_name}</h2>
+              <div class="student-profile-meta">
+                <span class="meta-item">
+                  <i data-lucide="id-card" style="width:14px;height:14px"></i>
+                  <span>รหัส <span style="font-family:var(--font-mono);color:var(--cyan-neon);font-weight:700">${profile.code_5_digit}</span></span>
+                </span>
+                <span class="meta-divider">•</span>
+                <span class="meta-item">
+                  <i data-lucide="graduation-cap" style="width:14px;height:14px"></i>
+                  <span>ม.${profile.grade === "M4" ? "4" : "5"}/${profile.room || "-"} เลขที่ ${profile.roll_no || "-"}</span>
+                </span>
+                <span class="meta-divider">•</span>
+                <span class="meta-item">
+                  <i data-lucide="calendar" style="width:14px;height:14px"></i>
+                  <span>ปีการศึกษา ${profile.year_be}</span>
+                </span>
+              </div>
+              ${profile.is_out_of_roster ? `
+                <div class="student-profile-out-of-roster-tag">
+                  <i data-lucide="alert-triangle" style="width:14px;height:14px"></i>
+                  <span>อยู่นอกบัญชีทางการของห้องเรียนนี้ (ส่งงานได้ตามปกติ)</span>
+                </div>
+              ` : ""}
             </div>
           </div>
-        `;
+          <div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="window.app.openProfilePhotoModal()" style="display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 12px">
+              <i data-lucide="pencil" style="width:13px;height:13px"></i>
+              <span>แก้ไขรูป</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      const avatarClickZone = document.getElementById("student-avatar-click-zone");
+      if (avatarClickZone) {
+        avatarClickZone.onclick = () => this.openProfilePhotoModal();
+      }
+
+      // Update header avatar as well
+      const headerAvatar = document.getElementById("user-header-avatar");
+      if (headerAvatar) {
+        if (profile.photo_url) {
+          headerAvatar.innerHTML = `<img src="${profile.photo_url}" alt="Avatar">`;
+          headerAvatar.style.display = "inline-flex";
+        } else {
+          headerAvatar.innerHTML = "";
+          headerAvatar.style.display = "none";
+        }
       }
 
       // Score Summary Cards
@@ -697,6 +762,179 @@ document.addEventListener("DOMContentLoaded", () => {
       });
 
       this.refreshIcons();
+    },
+
+    // --- Student Sessions & Tab Switcher ---
+
+    switchStudentTab(tab) {
+      this.studentActiveTab = tab;
+      const btnWorksheets = document.getElementById("btn-student-tab-worksheets");
+      const btnSessions = document.getElementById("btn-student-tab-sessions");
+      const contentWorksheets = document.getElementById("student-tab-worksheets-content");
+      const contentSessions = document.getElementById("student-tab-sessions-content");
+
+      if (tab === "worksheets") {
+        btnWorksheets?.classList.add("active");
+        btnSessions?.classList.remove("active");
+        if (contentWorksheets) contentWorksheets.style.display = "block";
+        if (contentSessions) contentSessions.style.display = "none";
+      } else {
+        btnWorksheets?.classList.remove("active");
+        btnSessions?.classList.add("active");
+        if (contentWorksheets) contentWorksheets.style.display = "none";
+        if (contentSessions) contentSessions.style.display = "block";
+        this.loadStudentSessions();
+      }
+      this.refreshIcons();
+    },
+
+    async loadStudentSessions() {
+      const container = document.getElementById("student-sessions-container");
+      const yearLabel = document.getElementById("student-sessions-year-label");
+
+      const yearBe = this.currentYearId === "yr_2570" ? "2570" : "2569";
+      const gradeStr = this.currentGrade === "M5" ? "ม.5" : "ม.4";
+      if (yearLabel) {
+        yearLabel.textContent = `ปีการศึกษา ${yearBe} (${gradeStr})`;
+      }
+
+      if (container) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);grid-column:1/-1;font-family:var(--font-hud)"><span class="spinner-inline"></span> กำลังโหลดตารางแผนการเรียน...</div>';
+      }
+
+      this.startProgress();
+      try {
+        const res = await window.apiClient.call("sessions.list", {
+          academic_year_id: this.currentYearId,
+          grade: this.currentGrade
+        });
+
+        if (!res.ok) {
+          if (container) {
+            container.innerHTML = `<div class="card" style="color:var(--crimson-alert);grid-column:1/-1">${res.error.message_th}</div>`;
+          }
+          return;
+        }
+
+        this.studentSessions = res.data.sessions || [];
+        this.renderStudentSessions(this.studentSessions);
+      } catch (err) {
+        if (container) {
+          container.innerHTML = `<div class="card" style="color:var(--crimson-alert);grid-column:1/-1">ไม่สามารถโหลดแผนการเรียนได้: ${err.message}</div>`;
+        }
+      } finally {
+        this.completeProgress();
+        this.refreshIcons();
+      }
+    },
+
+    renderStudentSessions(sessions) {
+      const container = document.getElementById("student-sessions-container");
+      if (!container) return;
+
+      if (!sessions || sessions.length === 0) {
+        container.innerHTML = `
+          <div class="card" style="text-align:center;padding:30px;color:var(--text-muted);grid-column:1/-1">
+            ยังไม่มีข้อมูลแผนการเรียนรู้สำหรับปีการศึกษานี้
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = sessions.map(s => {
+        let catClass = "badge-cat-lecture";
+        let catText = "บรรยายและปฏิบัติการ";
+        if (s.category === "lab" || (s.title && s.title.includes("Lab"))) {
+          catClass = "badge-cat-lab";
+          catText = "ปฏิบัติการทดลอง";
+        } else if (s.category === "project" || (s.title && s.title.includes("โครงงาน"))) {
+          catClass = "badge-cat-project";
+          catText = "โครงงานบูรณาการ";
+        }
+
+        let worksheetBtnHtml = "";
+        if (s.linked_worksheet_code) {
+          const wsNum = s.linked_worksheet_code.replace(/\D/g, "");
+          worksheetBtnHtml = `
+            <button class="session-worksheet-link-btn" onclick="window.app.jumpToWorksheet('${s.linked_worksheet_code}')">
+              <i data-lucide="file-text"></i>
+              <span>ใบงานที่ ${parseInt(wsNum, 10) || 1} (${s.linked_worksheet_code})</span>
+            </button>
+          `;
+        }
+
+        return `
+          <div class="session-card">
+            <div class="session-card-header">
+              <span class="session-num-badge">
+                <i data-lucide="calendar"></i> ครั้งที่ ${s.session_no}
+              </span>
+              <span class="session-category-badge ${catClass}">
+                ${catText}
+              </span>
+            </div>
+            <div class="session-card-title">${s.title}</div>
+            <div class="session-card-desc">${s.description || "ไม่มีรายละเอียดเพิ่มเติม"}</div>
+            ${worksheetBtnHtml ? `
+              <div class="session-card-footer">
+                <span style="color:var(--text-muted);display:flex;align-items:center;gap:4px">
+                  <i data-lucide="paperclip" style="width:13px;height:13px"></i> งานมอบหมาย:
+                </span>
+                ${worksheetBtnHtml}
+              </div>
+            ` : ""}
+          </div>
+        `;
+      }).join("");
+
+      this.refreshIcons();
+    },
+
+    jumpToWorksheet(worksheetCode) {
+      this.switchStudentTab("worksheets");
+      const allFilterChip = document.querySelector(".filter-chip[data-filter='all']");
+      if (allFilterChip) {
+        document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("active"));
+        allFilterChip.classList.add("active");
+        this.currentWorksheetFilter = "all";
+        this.applyWorksheetFilter();
+      }
+
+      setTimeout(() => {
+        const cards = document.querySelectorAll(".worksheet-card");
+        for (const card of cards) {
+          if (card.innerHTML.includes(worksheetCode)) {
+            card.scrollIntoView({ behavior: "smooth", block: "center" });
+            card.style.transition = "all 0.4s ease";
+            card.style.borderColor = "var(--cyan-neon)";
+            card.style.boxShadow = "0 0 25px var(--cyan-glow)";
+            setTimeout(() => {
+              card.style.borderColor = "";
+              card.style.boxShadow = "";
+            }, 2500);
+            break;
+          }
+        }
+      }, 150);
+    },
+
+    filterStudentSessions(query) {
+      if (!this.studentSessions) return;
+      const q = String(query || "").trim().toLowerCase();
+      if (!q) {
+        this.renderStudentSessions(this.studentSessions);
+        return;
+      }
+
+      const filtered = this.studentSessions.filter(s => {
+        const numMatch = String(s.session_no).includes(q) || `ครั้งที่ ${s.session_no}`.toLowerCase().includes(q);
+        const titleMatch = (s.title || "").toLowerCase().includes(q);
+        const descMatch = (s.description || "").toLowerCase().includes(q);
+        const wsMatch = (s.linked_worksheet_code || "").toLowerCase().includes(q);
+        return numMatch || titleMatch || descMatch || wsMatch;
+      });
+
+      this.renderStudentSessions(filtered);
     },
 
     openUploadModal(card) {
@@ -1551,6 +1789,422 @@ document.addEventListener("DOMContentLoaded", () => {
         statusBox.style.background = "rgba(244,63,94,0.2)";
         statusBox.style.color = "#fb7185";
         statusBox.textContent = "เกิดข้อผิดพลาด: " + err.message;
+      }
+    },
+
+    // --- Teacher Workspace Sessions Manager ---
+
+    switchTeacherTab(tab) {
+      this.teacherActiveTab = tab;
+      const btnGradebook = document.getElementById("btn-teacher-tab-gradebook");
+      const btnSessions = document.getElementById("btn-teacher-tab-sessions");
+      const contentGradebook = document.getElementById("teacher-tab-gradebook-content");
+      const contentSessions = document.getElementById("teacher-tab-sessions-content");
+
+      if (tab === "gradebook") {
+        btnGradebook?.classList.add("active");
+        btnSessions?.classList.remove("active");
+        if (contentGradebook) contentGradebook.style.display = "block";
+        if (contentSessions) contentSessions.style.display = "none";
+      } else {
+        btnGradebook?.classList.remove("active");
+        btnSessions?.classList.add("active");
+        if (contentGradebook) contentGradebook.style.display = "none";
+        if (contentSessions) contentSessions.style.display = "block";
+        
+        // Synchronize filters with current teacher workspace selections
+        const sessYr = document.getElementById("teacher-session-year-select");
+        const sessGrd = document.getElementById("teacher-session-grade-select");
+        if (sessYr) sessYr.value = this.currentYearId;
+        if (sessGrd) sessGrd.value = this.currentGrade;
+
+        this.loadTeacherSessions();
+      }
+      this.refreshIcons();
+    },
+
+    onTeacherSessionFilterChange() {
+      this.loadTeacherSessions();
+    },
+
+    async loadTeacherSessions() {
+      const yearSelect = document.getElementById("teacher-session-year-select");
+      const gradeSelect = document.getElementById("teacher-session-grade-select");
+      const container = document.getElementById("teacher-sessions-editor-container");
+      const statusPill = document.getElementById("teacher-snapshot-status-text");
+
+      const academic_year_id = yearSelect ? yearSelect.value : "yr_2569";
+      const grade = gradeSelect ? gradeSelect.value : "M4";
+
+      if (container) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted);grid-column:1/-1;font-family:var(--font-hud)"><span class="spinner-inline"></span> กำลังโหลดข้อมูลแผนการเรียนรู้...</div>';
+      }
+
+      this.startProgress();
+      try {
+        const res = await window.apiClient.call("sessions.list", {
+          academic_year_id,
+          grade
+        });
+
+        if (!res.ok) {
+          if (container) {
+            container.innerHTML = `<div class="card" style="color:var(--crimson-alert);grid-column:1/-1">${res.error.message_th}</div>`;
+          }
+          return;
+        }
+
+        this.teacherSessions = res.data.sessions || [];
+
+        if (statusPill) {
+          if (res.data.is_snapshot) {
+            const timeStr = res.data.updated_at ? new Date(res.data.updated_at).toLocaleString("th-TH") : "";
+            statusPill.innerHTML = `<span style="color:var(--cyan-neon)">Snapshot บันทึกแล้ว v${res.data.version_no} (${timeStr})</span>`;
+          } else {
+            statusPill.innerHTML = `<span style="color:var(--amber-warn)">แผนเริ่มต้นมาตรฐาน (ยังไม่ได้บันทึก Snapshot สำหรับปีนี้)</span>`;
+          }
+        }
+
+        this.renderTeacherSessionsEditor(this.teacherSessions, grade);
+      } catch (err) {
+        if (container) {
+          container.innerHTML = `<div class="card" style="color:var(--crimson-alert);grid-column:1/-1">เกิดข้อผิดพลาด: ${err.message}</div>`;
+        }
+      } finally {
+        this.completeProgress();
+        this.refreshIcons();
+      }
+    },
+
+    renderTeacherSessionsEditor(sessions, grade) {
+      const container = document.getElementById("teacher-sessions-editor-container");
+      if (!container) return;
+
+      const prefix = grade === "M5" ? "PHT5-W" : "PHT4-W";
+      const worksheetOptions = [
+        { code: "", label: "ไม่มีใบงานที่ต้องส่ง" },
+        ...Array.from({ length: 9 }, (_, i) => ({
+          code: `${prefix}0${i + 1}`,
+          label: `ใบงานที่ ${i + 1} (${prefix}0${i + 1})`
+        }))
+      ];
+
+      const fullSessions = [];
+      for (let i = 1; i <= 20; i++) {
+        const existing = sessions.find(s => s.session_no === i);
+        if (existing) {
+          fullSessions.push(existing);
+        } else {
+          fullSessions.push({
+            session_no: i,
+            title: `การเรียนรู้ครั้งที่ ${i}`,
+            description: "",
+            linked_worksheet_code: "",
+            category: "lecture"
+          });
+        }
+      }
+
+      container.innerHTML = fullSessions.map(s => `
+        <div class="session-editor-card" data-session-no="${s.session_no}">
+          <div class="session-editor-card-header">
+            <span class="session-num-badge">
+              <i data-lucide="edit-3"></i> ครั้งที่ ${s.session_no}
+            </span>
+            <span style="font-size:11px;color:var(--text-dim);font-family:var(--font-hud)">
+              100 นาที
+            </span>
+          </div>
+
+          <div>
+            <label class="session-editor-label" for="sess-title-${s.session_no}">หัวข้อบทเรียน / เรื่องที่เรียน:</label>
+            <input type="text" id="sess-title-${s.session_no}" class="form-control session-input-title" value="${s.title ? s.title.replace(/"/g, '&quot;') : ''}" placeholder="ระบุหัวข้อบทเรียนครั้งที่ ${s.session_no}" required style="font-size:14px;font-weight:600">
+          </div>
+
+          <div>
+            <label class="session-editor-label" for="sess-desc-${s.session_no}">รายละเอียดเนื้อหา / กิจกรรมการสอน:</label>
+            <textarea id="sess-desc-${s.session_no}" class="form-control session-input-desc" rows="2" placeholder="ระบุรายละเอียดคร่าวๆ เช่น กิจกรรม การทดลอง หรือจุดประสงค์การเรียนรู้" style="font-size:13px;line-height:1.4">${s.description || ''}</textarea>
+          </div>
+
+          <div>
+            <label class="session-editor-label" for="sess-ws-${s.session_no}">ใบงานปฏิบัติการที่เชื่อมโยง:</label>
+            <select id="sess-ws-${s.session_no}" class="form-control session-input-ws" style="font-size:13px">
+              ${worksheetOptions.map(opt => `
+                <option value="${opt.code}" ${opt.code === s.linked_worksheet_code ? 'selected' : ''}>
+                  ${opt.label}
+                </option>
+              `).join("")}
+            </select>
+          </div>
+        </div>
+      `).join("");
+
+      this.refreshIcons();
+    },
+
+    async loadTeacherDefaultSessions() {
+      const gradeSelect = document.getElementById("teacher-session-grade-select");
+      const grade = gradeSelect ? gradeSelect.value : "M4";
+
+      if (window.MockBackend && typeof window.MockBackend.handleApi === "function") {
+        const res = window.MockBackend.handleApi("sessions.list", { academic_year_id: "default", grade });
+        if (res.ok && res.data && res.data.sessions) {
+          this.renderTeacherSessionsEditor(res.data.sessions, grade);
+          this.showToast(`โหลดเนื้อหาเริ่มต้นสำหรับระดับชั้น ${grade === 'M5' ? 'ม.5' : 'ม.4'} เรียบร้อย (กด 'บันทึก Snapshot รายปี' เพื่อยืนยัน)`, "info");
+          return;
+        }
+      }
+
+      this.showToast("กรุณาเลือกปีการศึกษาและระดับชั้น", "info");
+    },
+
+    async saveTeacherSessionsSnapshot() {
+      const yearSelect = document.getElementById("teacher-session-year-select");
+      const gradeSelect = document.getElementById("teacher-session-grade-select");
+      const academic_year_id = yearSelect ? yearSelect.value : "yr_2569";
+      const grade = gradeSelect ? gradeSelect.value : "M4";
+
+      const cards = document.querySelectorAll(".session-editor-card");
+      if (!cards || cards.length === 0) {
+        this.showToast("ไม่พบข้อมูลแบบฟอร์มการสอน", "error");
+        return;
+      }
+
+      const sessions = [];
+      let hasEmptyTitle = false;
+
+      cards.forEach(card => {
+        const sessionNo = parseInt(card.dataset.sessionNo, 10);
+        const titleInput = card.querySelector(".session-input-title");
+        const descInput = card.querySelector(".session-input-desc");
+        const wsSelect = card.querySelector(".session-input-ws");
+
+        const title = titleInput ? titleInput.value.trim() : "";
+        const desc = descInput ? descInput.value.trim() : "";
+        const wsCode = wsSelect ? wsSelect.value.trim() : "";
+
+        if (!title) {
+          hasEmptyTitle = true;
+        }
+
+        let cat = "lecture";
+        if (desc.includes("Lab") || title.includes("Lab") || (wsCode && !title.includes("โครงงาน"))) {
+          cat = "lab";
+        } else if (title.includes("โครงงาน") || desc.includes("โครงงาน")) {
+          cat = "project";
+        }
+
+        sessions.push({
+          session_no: sessionNo,
+          title: title || `การเรียนรู้ครั้งที่ ${sessionNo}`,
+          description: desc,
+          linked_worksheet_code: wsCode,
+          category: cat
+        });
+      });
+
+      if (hasEmptyTitle) {
+        if (!confirm("มีบางครั้งที่ยังไม่ได้กรอกหัวข้อบทเรียน ต้องการบันทึกต่อหรือไม่?")) {
+          return;
+        }
+      }
+
+      this.startProgress();
+      try {
+        const res = await window.apiClient.call("sessions.saveSnapshot", {
+          academic_year_id,
+          grade,
+          sessions
+        });
+
+        if (!res.ok) {
+          this.showToast(res.error.message_th || "ไม่สามารถบันทึก Snapshot ได้", "error");
+          return;
+        }
+
+        const data = res.data;
+        this.showToast(data.message_th || "บันทึก Snapshot รายปีการศึกษาสำเร็จ!", "success");
+
+        const statusPill = document.getElementById("teacher-snapshot-status-text");
+        if (statusPill) {
+          const timeStr = data.updated_at ? new Date(data.updated_at).toLocaleString("th-TH") : "";
+          statusPill.innerHTML = `<span style="color:var(--cyan-neon)">Snapshot บันทึกแล้ว v${data.version_no} (${timeStr})</span>`;
+        }
+      } catch (err) {
+        this.showToast("เกิดข้อผิดพลาดในการบันทึก: " + err.message, "error");
+      } finally {
+        this.completeProgress();
+        this.refreshIcons();
+      }
+    },
+
+    openProfilePhotoModal() {
+      const profile = this.currentProfile || {};
+      const codeEl = document.getElementById("modal-profile-code-label");
+      if (codeEl) codeEl.textContent = profile.code_5_digit || "";
+
+      const imgPreview = document.getElementById("modal-profile-img-preview");
+      const placeholderPreview = document.getElementById("modal-profile-placeholder-preview");
+      const btnRemove = document.getElementById("btn-modal-remove-photo");
+      const btnSave = document.getElementById("btn-modal-save-photo");
+      const fileInfo = document.getElementById("modal-profile-file-info");
+      const progressEl = document.getElementById("modal-profile-upload-progress");
+      const fileInput = document.getElementById("input-student-profile-file");
+
+      if (fileInput) fileInput.value = "";
+      if (progressEl) progressEl.style.display = "none";
+      this.selectedProfilePhotoDataUrl = null;
+
+      if (profile.photo_url) {
+        if (imgPreview) {
+          imgPreview.src = profile.photo_url;
+          imgPreview.style.display = "block";
+        }
+        if (placeholderPreview) placeholderPreview.style.display = "none";
+        if (btnRemove) btnRemove.style.display = "inline-flex";
+        if (fileInfo) fileInfo.textContent = "รูปโปรไฟล์ปัจจุบันของคุณ (คลิกที่รูปเพื่อเลือกไฟล์ใหม่)";
+      } else {
+        if (imgPreview) {
+          imgPreview.src = "";
+          imgPreview.style.display = "none";
+        }
+        if (placeholderPreview) placeholderPreview.style.display = "flex";
+        if (btnRemove) btnRemove.style.display = "none";
+        if (fileInfo) fileInfo.textContent = "ยังไม่มีรูปโปรไฟล์ (คลิกเพื่อเลือกไฟล์ภาพจากอุปกรณ์ของคุณ)";
+      }
+
+      if (btnSave) btnSave.disabled = true;
+
+      const modal = document.getElementById("modal-student-profile-photo");
+      if (modal) modal.style.display = "flex";
+      this.refreshIcons();
+    },
+
+    closeProfilePhotoModal() {
+      const modal = document.getElementById("modal-student-profile-photo");
+      if (modal) modal.style.display = "none";
+      this.selectedProfilePhotoDataUrl = null;
+    },
+
+    handleProfileFileSelected(event) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        alert("รองรับเฉพาะไฟล์รูปภาพ JPG, PNG, WEBP เท่านั้น");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const targetSize = Math.min(600, Math.max(img.width, img.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = targetSize;
+          canvas.height = targetSize;
+          const ctx = canvas.getContext("2d");
+
+          const minDim = Math.min(img.width, img.height);
+          const sx = (img.width - minDim) / 2;
+          const sy = (img.height - minDim) / 2;
+
+          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, targetSize, targetSize);
+          const compressedDataUrl = canvas.toDataURL("image/jpeg", 0.85);
+
+          this.selectedProfilePhotoDataUrl = compressedDataUrl;
+          this.selectedProfileFileName = file.name;
+
+          const imgPreview = document.getElementById("modal-profile-img-preview");
+          const placeholderPreview = document.getElementById("modal-profile-placeholder-preview");
+          const btnSave = document.getElementById("btn-modal-save-photo");
+          const fileInfo = document.getElementById("modal-profile-file-info");
+
+          if (imgPreview) {
+            imgPreview.src = compressedDataUrl;
+            imgPreview.style.display = "block";
+          }
+          if (placeholderPreview) placeholderPreview.style.display = "none";
+
+          const sizeKb = Math.round(((compressedDataUrl.length * 3) / 4) / 1024);
+          if (fileInfo) {
+            fileInfo.innerHTML = "ไฟล์: <strong>" + file.name + "</strong> (~" + sizeKb + " KB) พร้อมบันทึกลง Google Drive";
+          }
+          if (btnSave) btnSave.disabled = false;
+          this.refreshIcons();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    },
+
+    async uploadProfilePhotoConfirm() {
+      if (!this.selectedProfilePhotoDataUrl) return;
+
+      const btnSave = document.getElementById("btn-modal-save-photo");
+      const progressEl = document.getElementById("modal-profile-upload-progress");
+      const fillEl = document.getElementById("modal-profile-progress-fill");
+      const textEl = document.getElementById("modal-profile-progress-text");
+
+      if (btnSave) btnSave.disabled = true;
+      if (progressEl) progressEl.style.display = "block";
+      if (fillEl) fillEl.style.width = "25%";
+      if (textEl) textEl.textContent = "กำลังเชื่อมต่อ Google Drive...";
+
+      try {
+        if (fillEl) fillEl.style.width = "55%";
+        if (textEl) textEl.textContent = "กำลังอัปโหลดและผูกข้อมูลกับ Student ID...";
+
+        const res = await window.apiClient.call("student.uploadProfilePhoto", {
+          file_base64: this.selectedProfilePhotoDataUrl,
+          mime_type: "image/jpeg",
+          file_name: this.selectedProfileFileName || "profile.jpg"
+        });
+
+        if (!res.ok) {
+          throw new Error(res.error?.message_th || "อัปโหลดภาพไม่สำเร็จ");
+        }
+
+        if (fillEl) fillEl.style.width = "100%";
+        if (textEl) textEl.textContent = "สำเร็จ!";
+
+        if (this.currentProfile) {
+          this.currentProfile.photo_url = res.data.photo_url;
+          this.currentProfile.photo_drive_file_id = res.data.photo_drive_file_id;
+          sessionStorage.setItem("PHT_USER_PROFILE", JSON.stringify(this.currentProfile));
+        }
+
+        setTimeout(() => {
+          this.closeProfilePhotoModal();
+          this.loadStudentDashboard();
+        }, 400);
+
+      } catch (err) {
+        alert("เกิดข้อผิดพลาดในการอัปโหลด: " + err.message);
+        if (btnSave) btnSave.disabled = false;
+        if (progressEl) progressEl.style.display = "none";
+      }
+    },
+
+    async removeProfilePhoto() {
+      if (!confirm("คุณต้องการลบรูปโปรไฟล์นี้ใช่หรือไม่?")) return;
+
+      try {
+        const res = await window.apiClient.call("student.removeProfilePhoto", {});
+        if (!res.ok) {
+          throw new Error(res.error?.message_th || "ลบรูปภาพไม่สำเร็จ");
+        }
+
+        if (this.currentProfile) {
+          this.currentProfile.photo_url = null;
+          this.currentProfile.photo_drive_file_id = null;
+          sessionStorage.setItem("PHT_USER_PROFILE", JSON.stringify(this.currentProfile));
+        }
+
+        this.closeProfilePhotoModal();
+        this.loadStudentDashboard();
+      } catch (err) {
+        alert("เกิดข้อผิดพลาด: " + err.message);
       }
     },
 

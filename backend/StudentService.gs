@@ -57,6 +57,8 @@ const StudentService = {
       student_uid: student.student_uid,
       display_name: student.display_name,
       code_5_digit: student.code_5_digit,
+      photo_url: student.photo_url || null,
+      photo_drive_file_id: student.photo_drive_file_id || null,
       year_be: repository.getYearBe(academic_year_id),
       grade: grade,
       room: enrollment ? enrollment.room : null,
@@ -187,6 +189,97 @@ const StudentService = {
         score_summary: scoreSummary,
         worksheet_summary: worksheetSummary,
         worksheet_cards: worksheetCards
+      }
+    };
+  },
+
+  /**
+   * Upload and update student profile photo
+   * Threat Model: Only the authenticated student can update their own profile photo
+   */
+  uploadProfilePhoto(session, payload, repository) {
+    const studentUid = Authorization.enforceStudent(session);
+    const student = repository.findStudentByUid(studentUid);
+    if (!student) {
+      throw new Error("USER_NOT_FOUND: ไม่พบข้อมูลนักเรียน");
+    }
+
+    const { file_base64, mime_type, file_name } = payload || {};
+    if (!file_base64 || typeof file_base64 !== "string") {
+      throw new Error("INVALID_REQUEST: โปรดระบุข้อมูลไฟล์ภาพ");
+    }
+
+    const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+    const normalizedMime = (mime_type || "image/jpeg").toLowerCase();
+    if (!allowedMimes.includes(normalizedMime)) {
+      throw new Error("INVALID_FILE_TYPE: รองรับเฉพาะไฟล์รูปภาพ JPEG, PNG, WEBP เท่านั้น");
+    }
+
+    const driveResult = repository.saveProfilePhotoToDrive(student.code_5_digit, student.student_uid, {
+      file_base64,
+      mime_type: normalizedMime,
+      file_name: file_name || ("profile_" + student.code_5_digit + ".jpg"),
+      old_file_id: student.photo_drive_file_id
+    });
+
+    student.photo_drive_file_id = driveResult.drive_file_id;
+    student.photo_url = driveResult.photo_url;
+    student.updated_at = new Date().toISOString();
+    repository.saveStudent(student);
+
+    if (repository.recordAuditLog) {
+      repository.recordAuditLog({
+        audit_id: "aud_" + AuthService.generateSecureToken().substring(0, 12),
+        actor_type: "student",
+        actor_uid: studentUid,
+        action: "UPDATE_PROFILE_PHOTO",
+        object_type: "Student",
+        object_id: student.code_5_digit,
+        outcome: "SUCCESS",
+        change_summary: "อัปโหลดรูปโปรไฟล์ผูกกับรหัสนักเรียน " + student.code_5_digit + " (Drive File ID: " + driveResult.drive_file_id + ")",
+        at: new Date().toISOString()
+      });
+    }
+
+    return {
+      ok: true,
+      data: {
+        student_uid: student.student_uid,
+        code_5_digit: student.code_5_digit,
+        display_name: student.display_name,
+        photo_url: student.photo_url,
+        photo_drive_file_id: student.photo_drive_file_id,
+        message_th: "อัปโหลดรูปโปรไฟล์ลง Google Drive และบันทึกผูกกับรหัสนักเรียนสำเร็จเรียบร้อย"
+      }
+    };
+  },
+
+  /**
+   * Remove student profile photo
+   */
+  removeProfilePhoto(session, payload, repository) {
+    const studentUid = Authorization.enforceStudent(session);
+    const student = repository.findStudentByUid(studentUid);
+    if (!student) {
+      throw new Error("USER_NOT_FOUND: ไม่พบข้อมูลนักเรียน");
+    }
+
+    if (student.photo_drive_file_id && repository.deleteDriveFile) {
+      repository.deleteDriveFile(student.photo_drive_file_id);
+    }
+
+    student.photo_drive_file_id = null;
+    student.photo_url = null;
+    student.updated_at = new Date().toISOString();
+    repository.saveStudent(student);
+
+    return {
+      ok: true,
+      data: {
+        student_uid: student.student_uid,
+        code_5_digit: student.code_5_digit,
+        photo_url: null,
+        message_th: "ลบรูปโปรไฟล์เรียบร้อยแล้ว"
       }
     };
   },

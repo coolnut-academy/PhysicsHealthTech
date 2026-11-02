@@ -637,6 +637,84 @@ class SheetRepository {
     return this.fileStorage.get(driveFileId) || "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
   }
 
+  /**
+   * Save student profile photo to Google Drive
+   * - In GAS runtime: Creates file inside 'ProfilePhotos' subfolder in Drive Root
+   * - Sets sharing to ANYONE_WITH_LINK VIEW for web display
+   * - Generates direct display URL (lh3.googleusercontent.com/d/{fileId})
+   * - Trashes old profile photo if replaced
+   * - Linked to Student Code & UID
+   */
+  saveProfilePhotoToDrive(studentCode, studentUid, fileData) {
+    if (this.isGasRuntime && typeof DriveApp !== "undefined") {
+      try {
+        const rootFolderId = (typeof AppConfig !== "undefined") ? AppConfig.getDriveRootFolderId() : "";
+        const rootFolder = rootFolderId ? DriveApp.getFolderById(rootFolderId) : DriveApp.getRootFolder();
+        
+        let targetFolder = rootFolder;
+        try {
+          const subfolders = rootFolder.getFoldersByName("ProfilePhotos");
+          if (subfolders.hasNext()) {
+            targetFolder = subfolders.next();
+          } else {
+            targetFolder = rootFolder.createFolder("ProfilePhotos");
+          }
+        } catch (fErr) {
+          targetFolder = rootFolder;
+        }
+
+        const rawBase64 = (fileData.file_base64 || "").replace(/^data:image\/\w+;base64,/, "");
+        const decoded = Utilities.base64Decode(rawBase64);
+        const mimeType = fileData.mime_type || "image/jpeg";
+        const extension = mimeType === "image/png" ? ".png" : (mimeType === "image/webp" ? ".webp" : ".jpg");
+        const fileName = "profile_" + studentCode + "_" + studentUid + extension;
+        const blob = Utilities.newBlob(decoded, mimeType, fileName);
+
+        if (fileData.old_file_id && !fileData.old_file_id.startsWith("drv_")) {
+          try {
+            DriveApp.getFileById(fileData.old_file_id).setTrashed(true);
+          } catch (e) {}
+        }
+
+        const driveFile = targetFolder.createFile(blob);
+        try {
+          driveFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        } catch (sErr) {
+          if (typeof Logger !== "undefined") Logger.log("Notice: Set sharing: " + sErr.message);
+        }
+
+        const fileId = driveFile.getId();
+        const photoUrl = "https://lh3.googleusercontent.com/d/" + fileId;
+        return {
+          drive_file_id: fileId,
+          photo_url: photoUrl
+        };
+      } catch (err) {
+        if (typeof Logger !== "undefined") Logger.log("Drive profile upload error: " + err.message);
+        throw new Error("DRIVE_UPLOAD_FAILED: ไม่สามารถบันทึกภาพโปรไฟล์ลงใน Google Drive ได้ (" + err.message + ")");
+      }
+    }
+
+    if (!this.fileStorage) this.fileStorage = new Map();
+    const driveFileId = "drv_profile_" + studentCode + "_" + (typeof AuthService !== "undefined" ? AuthService.generateSecureToken().substring(0, 10) : Math.random().toString(16).substring(2, 10));
+    this.fileStorage.set(driveFileId, fileData.file_base64);
+    return {
+      drive_file_id: driveFileId,
+      photo_url: fileData.file_base64
+    };
+  }
+
+  deleteDriveFile(fileId) {
+    if (!fileId) return;
+    if (this.isGasRuntime && typeof DriveApp !== "undefined" && !fileId.startsWith("drv_")) {
+      try {
+        DriveApp.getFileById(fileId).setTrashed(true);
+      } catch (e) {}
+    } else if (this.fileStorage) {
+      this.fileStorage.delete(fileId);
+    }
+  }
+
   // Groups and Projects
   findGroupById(groupId) {
     const table = this.getTable("Groups");
@@ -711,6 +789,15 @@ class SheetRepository {
     return table.filter(a => a.project_id === projectId && a.artifact_kind === kind && !a.deleted_at);
   }
 
+  findSessionSnapshot(academicYearId, grade) {
+    const table = this.getTable("SessionSnapshots");
+    return table.find(s => s.academic_year_id === academicYearId && s.grade === grade);
+  }
+
+  saveSessionSnapshot(snapshot) {
+    this.upsertRowInTable("SessionSnapshots", s => s.academic_year_id === snapshot.academic_year_id && s.grade === snapshot.grade, snapshot);
+  }
+
   recordAuditLog(log) {
     this.appendRowToTable("AuditLogs", { ...log, at: log.at || new Date().toISOString() });
   }
@@ -734,7 +821,7 @@ const SchemaMigrator = {
   SCHEMA_VERSION: "2.0.0",
 
   TAB_DEFINITIONS: {
-    Students: ["student_uid", "code_5_digit", "display_name", "status", "credential_version", "created_at", "updated_at", "deleted_at"],
+    Students: ["student_uid", "code_5_digit", "display_name", "status", "credential_version", "created_at", "updated_at", "deleted_at", "photo_drive_file_id", "photo_url"],
     StudentCredentials: ["credential_id", "student_uid", "verifier_alg", "salt", "verifier", "secret_version", "issued_at", "revoked_at"],
     Teachers: ["teacher_uid", "google_sub", "email_for_display", "name", "role", "status", "auth_secret", "created_at"],
     Sessions: ["session_id", "principal_type", "principal_uid", "role", "token_hash", "issued_at", "last_seen_at", "expires_at", "revoked_at"],
@@ -760,6 +847,7 @@ const SchemaMigrator = {
     BonusAwards: ["bonus_id", "syllabus_version_id", "student_uid", "bonus_kind", "source_worksheet_code", "points_int", "state", "approved_by", "note", "created_at"],
     GroupScoreComponents: ["group_score_id", "group_id", "task_code", "component_id", "shared_points_int", "member_snapshot_id", "teacher_uid", "state", "created_at"],
     IndividualScoreComponents: ["score_component_id", "student_uid", "task_code", "component_id", "points_int", "state"],
+    SessionSnapshots: ["snapshot_id", "academic_year_id", "grade", "version_no", "sessions_json", "created_at", "updated_at", "updated_by_uid"],
     Operations: ["operation_id", "actor_uid", "action", "target_type", "target_id", "idempotency_key_hash", "state", "created_at"],
     AuditLogs: ["audit_id", "actor_type", "actor_uid", "action", "object_type", "object_id", "outcome", "change_summary", "at"]
   },
@@ -793,7 +881,16 @@ const SchemaMigrator = {
           sheet.setFrozenRows(1);
           results.push(`Updated headers for tab ${tabName}`);
         } else {
-          results.push(`Tab ${tabName} already exists`);
+          // Detect and append any missing columns (e.g. photo_drive_file_id, photo_url)
+          const missingHeaders = headers.filter(h => !existingHeaders.includes(h));
+          if (missingHeaders.length > 0) {
+            const startCol = existingHeaders.length + 1;
+            sheet.getRange(1, startCol, 1, missingHeaders.length).setValues([missingHeaders]);
+            sheet.getRange(1, startCol, 1, missingHeaders.length).setFontWeight("bold").setBackground("#eef3f9");
+            results.push(`Appended missing columns [${missingHeaders.join(", ")}] to tab ${tabName}`);
+          } else {
+            results.push(`Tab ${tabName} already exists`);
+          }
         }
       }
     }
@@ -1436,6 +1533,8 @@ const AuthService = {
           code_5_digit: student.code_5_digit,
           display_name: student.display_name,
           role: "student",
+          photo_url: student.photo_url || null,
+          photo_drive_file_id: student.photo_drive_file_id || null,
           grade: activeEnr ? activeEnr.grade : "M4",
           room: activeEnr ? activeEnr.room : "1",
           roll_no: activeEnr ? activeEnr.roll_no : null,
@@ -1645,6 +1744,8 @@ const StudentService = {
       student_uid: student.student_uid,
       display_name: student.display_name,
       code_5_digit: student.code_5_digit,
+      photo_url: student.photo_url || null,
+      photo_drive_file_id: student.photo_drive_file_id || null,
       year_be: repository.getYearBe(academic_year_id),
       grade: grade,
       room: enrollment ? enrollment.room : null,
@@ -1775,6 +1876,97 @@ const StudentService = {
         score_summary: scoreSummary,
         worksheet_summary: worksheetSummary,
         worksheet_cards: worksheetCards
+      }
+    };
+  },
+
+  /**
+   * Upload and update student profile photo
+   * Threat Model: Only the authenticated student can update their own profile photo
+   */
+  uploadProfilePhoto(session, payload, repository) {
+    const studentUid = Authorization.enforceStudent(session);
+    const student = repository.findStudentByUid(studentUid);
+    if (!student) {
+      throw new Error("USER_NOT_FOUND: ไม่พบข้อมูลนักเรียน");
+    }
+
+    const { file_base64, mime_type, file_name } = payload || {};
+    if (!file_base64 || typeof file_base64 !== "string") {
+      throw new Error("INVALID_REQUEST: โปรดระบุข้อมูลไฟล์ภาพ");
+    }
+
+    const allowedMimes = ["image/jpeg", "image/png", "image/webp"];
+    const normalizedMime = (mime_type || "image/jpeg").toLowerCase();
+    if (!allowedMimes.includes(normalizedMime)) {
+      throw new Error("INVALID_FILE_TYPE: รองรับเฉพาะไฟล์รูปภาพ JPEG, PNG, WEBP เท่านั้น");
+    }
+
+    const driveResult = repository.saveProfilePhotoToDrive(student.code_5_digit, student.student_uid, {
+      file_base64,
+      mime_type: normalizedMime,
+      file_name: file_name || ("profile_" + student.code_5_digit + ".jpg"),
+      old_file_id: student.photo_drive_file_id
+    });
+
+    student.photo_drive_file_id = driveResult.drive_file_id;
+    student.photo_url = driveResult.photo_url;
+    student.updated_at = new Date().toISOString();
+    repository.saveStudent(student);
+
+    if (repository.recordAuditLog) {
+      repository.recordAuditLog({
+        audit_id: "aud_" + AuthService.generateSecureToken().substring(0, 12),
+        actor_type: "student",
+        actor_uid: studentUid,
+        action: "UPDATE_PROFILE_PHOTO",
+        object_type: "Student",
+        object_id: student.code_5_digit,
+        outcome: "SUCCESS",
+        change_summary: "อัปโหลดรูปโปรไฟล์ผูกกับรหัสนักเรียน " + student.code_5_digit + " (Drive File ID: " + driveResult.drive_file_id + ")",
+        at: new Date().toISOString()
+      });
+    }
+
+    return {
+      ok: true,
+      data: {
+        student_uid: student.student_uid,
+        code_5_digit: student.code_5_digit,
+        display_name: student.display_name,
+        photo_url: student.photo_url,
+        photo_drive_file_id: student.photo_drive_file_id,
+        message_th: "อัปโหลดรูปโปรไฟล์ลง Google Drive และบันทึกผูกกับรหัสนักเรียนสำเร็จเรียบร้อย"
+      }
+    };
+  },
+
+  /**
+   * Remove student profile photo
+   */
+  removeProfilePhoto(session, payload, repository) {
+    const studentUid = Authorization.enforceStudent(session);
+    const student = repository.findStudentByUid(studentUid);
+    if (!student) {
+      throw new Error("USER_NOT_FOUND: ไม่พบข้อมูลนักเรียน");
+    }
+
+    if (student.photo_drive_file_id && repository.deleteDriveFile) {
+      repository.deleteDriveFile(student.photo_drive_file_id);
+    }
+
+    student.photo_drive_file_id = null;
+    student.photo_url = null;
+    student.updated_at = new Date().toISOString();
+    repository.saveStudent(student);
+
+    return {
+      ok: true,
+      data: {
+        student_uid: student.student_uid,
+        code_5_digit: student.code_5_digit,
+        photo_url: null,
+        message_th: "ลบรูปโปรไฟล์เรียบร้อยแล้ว"
       }
     };
   },
@@ -3002,6 +3194,412 @@ if (typeof module !== "undefined" && module.exports) {
 }
 
 // ==============================================================================
+// MODULE: SessionService.gs
+// ==============================================================================
+
+/**
+ * PhysicsHealthTech V2.0 - Session Service
+ * Manages 20 sessions course plan snapshots per academic year and grade.
+ * 
+ * Rules:
+ * - Each course consists of 20 sessions (100 min/session)
+ * - Saved as a snapshot isolated per academic year and grade
+ * - Changes in one academic year do not affect other academic years
+ */
+
+const SessionService = {
+  DEFAULT_M4_SESSIONS: [
+    {
+      session_no: 1,
+      title: "ปฐมนิเทศและการวัดปริมาณทางกายภาพสุขภาพ",
+      description: "แนะนำรายวิชา ข้อตกลง เกณฑ์การประเมิน เครื่องมือวัดพื้นฐานและเลขนัยสำคัญทางชีวกลศาสตร์",
+      linked_worksheet_code: "PHT4-W01",
+      category: "lecture"
+    },
+    {
+      session_no: 2,
+      title: "ปฏิบัติการวัดสัญญาณชีพและความคลาดเคลื่อน (Lab W01)",
+      description: "ฝึกปฏิบัติวัดความดันโลหิต อัตราชีพจร และวิเคราะห์ความคลาดเคลื่อนทางสถิติ บันทึกผลส่งใบงานที่ 1",
+      linked_worksheet_code: "PHT4-W01",
+      category: "lab"
+    },
+    {
+      session_no: 3,
+      title: "จลนศาสตร์การเคลื่อนที่และเวกเตอร์ของร่างกายมนุษย์",
+      description: "ศึกษาตำแหน่ง การกระจัด ความเร็ว ความเร่ง ในการเคลื่อนไหวของข้อต่อและรยางค์",
+      linked_worksheet_code: "PHT4-W02",
+      category: "lecture"
+    },
+    {
+      session_no: 4,
+      title: "การวิเคราะห์การเคลื่อนไหวทางชีวกลศาสตร์ด้วยวิดีโอ (Lab W02)",
+      description: "บันทึกและวิเคราะห์เวกเตอร์การเคลื่อนไหวข้อเท้าด้วยซอฟต์แวร์ Tracker บันทึกผลส่งใบงานที่ 2",
+      linked_worksheet_code: "PHT4-W02",
+      category: "lab"
+    },
+    {
+      session_no: 5,
+      title: "กฎการเคลื่อนที่ของนิวตันและแรงกระทำในระบบกล้ามเนื้อ",
+      description: "ศึกษาแรงภายในกล้ามเนื้อ แรงภายนอก และสมดุลแรงต่อกระดูกสันหลังและข้อต่อ",
+      linked_worksheet_code: "PHT4-W03",
+      category: "lecture"
+    },
+    {
+      session_no: 6,
+      title: "การทดลองจุดศูนย์ถ่วงและเสถียรภาพการทรงตัว (Lab W03)",
+      description: "หาจุดศูนย์ถ่วง (Center of Gravity) ของร่างกายในอิริยาบถต่างๆ และการประยุกต์ป้องกันการล้ม ส่งใบงานที่ 3",
+      linked_worksheet_code: "PHT4-W03",
+      category: "lab"
+    },
+    {
+      session_no: 7,
+      title: "งานและพลังงานในระบบชีวกลของมนุษย์",
+      description: "นิยามงานทางกลศาสตร์ พลังงานจลน์ พลังงานศักย์ และอัตราการเผาผลาญพลังงานพื้นฐาน (BMR)",
+      linked_worksheet_code: "PHT4-W04",
+      category: "lecture"
+    },
+    {
+      session_no: 8,
+      title: "การทดสอบกำลังงานและการก้าวเดิน (Lab W04)",
+      description: "ปฏิบัติการคำนวณกำลังงานที่ใช้ในการเดิน-วิ่ง และประสิทธิภาพเชิงกลของร่างกาย ส่งใบงานที่ 4",
+      linked_worksheet_code: "PHT4-W04",
+      category: "lab"
+    },
+    {
+      session_no: 9,
+      title: "โมเมนตัม แรงดล และกลไกการบาดเจ็บจากการชน",
+      description: "กฎการอนุรักษ์โมเมนตัม แรงดล และชีวกลศาสตร์การบาดเจ็บทางกีฬาและอุบัติเหตุ",
+      linked_worksheet_code: "PHT4-W05",
+      category: "lecture"
+    },
+    {
+      session_no: 10,
+      title: "การทดสอบแรงดลและการซับแรงกระแทก (Lab W05)",
+      description: "ทดสอบคุณสมบัติการดูดซับแรงกระแทกของวัสดุทางการแพทย์และกีฬา ส่งใบงานที่ 5",
+      linked_worksheet_code: "PHT4-W05",
+      category: "lab"
+    },
+    {
+      session_no: 11,
+      title: "สมดุลการหมุน ทอร์ก และระบบคานในร่างกาย",
+      description: "การคำนวณทอร์ก แขนของแรง และระบบคาน 3 ประเภทในข้อต่อและกระดูกมนุษย์",
+      linked_worksheet_code: "PHT4-W06",
+      category: "lecture"
+    },
+    {
+      session_no: 12,
+      title: "การวัดทอร์กข้อต่อและแขนกลชีวภาพ (Lab W06)",
+      description: "การทดลองวัดทอร์กของกล้ามเนื้อไบเซปส์และแบบจำลองข้อศอก ส่งใบงานที่ 6",
+      linked_worksheet_code: "PHT4-W06",
+      category: "lab"
+    },
+    {
+      session_no: 13,
+      title: "สภาพยืดหยุ่น ความเค้น ความเครียดของเนื้อเยื่อชีวภาพ",
+      description: "กฎของฮุก โมดูลัสของยัง และพฤติกรรมเชิงกลของกระดูก เส้นเอ็น และหลอดเลือด",
+      linked_worksheet_code: "PHT4-W07",
+      category: "lecture"
+    },
+    {
+      session_no: 14,
+      title: "การทดสอบมอดุลัสความยืดหยุ่นของวัสดุกายภาพ (Lab W07)",
+      description: "ปฏิบัติการทดสอบแรงดึงและความเค้นของวัสดุอุปกรณ์กายภาพบำบัด ส่งใบงานที่ 7",
+      linked_worksheet_code: "PHT4-W07",
+      category: "lab"
+    },
+    {
+      session_no: 15,
+      title: "สถิตยศาสตร์ของไหลและความดันในระบบหลอดเลือด",
+      description: "ความหนาแน่น ความดันสถิต กฎของปาสคาล และหลักการของเครื่องวัดความดันแบบคอลัมน์ปรอท",
+      linked_worksheet_code: "PHT4-W08",
+      category: "lecture"
+    },
+    {
+      session_no: 16,
+      title: "พลศาสตร์ของไหลและสมการแบร์นูลลีในระบบไหลเวียนเลือด",
+      description: "สมการความต่อเนื่อง สมการแบร์นูลลี ความหนืด และผลกระทบต่อภาวะหลอดเลือดตีบตัน",
+      linked_worksheet_code: "PHT4-W08",
+      category: "lecture"
+    },
+    {
+      session_no: 17,
+      title: "แบบจำลองระบบหลอดเลือดและการไหล (Lab W08)",
+      description: "ปฏิบัติการทดสอบแบบจำลองการไหลของของเหลวในท่อยางจำลองเส้นเลือด ส่งใบงานที่ 8",
+      linked_worksheet_code: "PHT4-W08",
+      category: "lab"
+    },
+    {
+      session_no: 18,
+      title: "บูรณาการโครงงานฟิสิกส์สุขภาพ: ระดมความคิดและกำหนดโจทย์วิจัย",
+      description: "แบ่งกลุ่มโครงงาน สำรวจปัญหาด้านสุขภาพในโรงเรียน/ชุมชน และออกแบบกรอบโครงงาน",
+      linked_worksheet_code: "PHT4-W09",
+      category: "project"
+    },
+    {
+      session_no: 19,
+      title: "ปฏิบัติการประดิษฐ์ต้นแบบและเก็บข้อมูลโครงงาน (Lab W09)",
+      description: "สร้างชิ้นงานต้นแบบ หรือ ดำเนินการทดลองเก็บข้อมูลเชิงวิทยาศาสตร์สุขภาพ บันทึกส่งใบงานที่ 9",
+      linked_worksheet_code: "PHT4-W09",
+      category: "project"
+    },
+    {
+      session_no: 20,
+      title: "การนำเสนอผลงานโครงงานกลุ่มและประเมินผลสัมฤทธิ์",
+      description: "นำเสนอโปสเตอร์/ชิ้นงานต้นแบบ ตอบข้อซักถาม และสะท้อนคิดปิดภาคเรียน",
+      linked_worksheet_code: "PHT4-W09",
+      category: "project"
+    }
+  ],
+
+  DEFAULT_M5_SESSIONS: [
+    {
+      session_no: 1,
+      title: "ปฐมนิเทศและอุณหพลศาสตร์ในร่างกายมนุษย์",
+      description: "แนะนำรายวิชา ข้อตกลง กฎอุณหพลศาสตร์ และกลไกการถ่ายโอนความร้อนในสิ่งมีชีวิต",
+      linked_worksheet_code: "PHT5-W01",
+      category: "lecture"
+    },
+    {
+      session_no: 2,
+      title: "ปฏิบัติการวัดการถ่ายโอนความร้อนและการควบคุมอุณหภูมิ (Lab W01)",
+      description: "ทดลองวัดอุณหภูมิผิวหนัง อัตราการสูญเสียความร้อน และการประคบร้อน-เย็น ส่งใบงานที่ 1",
+      linked_worksheet_code: "PHT5-W01",
+      category: "lab"
+    },
+    {
+      session_no: 3,
+      title: "ฟิสิกส์ของคลื่นเสียงและระบบการได้ยิน",
+      description: "คลื่นเสียง ความเข้มเสียง ระดับเสียง และกลไกการทำงานของหูมนุษย์",
+      linked_worksheet_code: "PHT5-W02",
+      category: "lecture"
+    },
+    {
+      session_no: 4,
+      title: "คลื่นเหนือเสียงและอัลตราซาวด์ทางการแพทย์ (Lab W02)",
+      description: "ปฏิบัติการวัดความถี่คลื่นอัลตราซาวด์และการสะท้อนของคลื่นในเนื้อเยื่อจำลอง ส่งใบงานที่ 2",
+      linked_worksheet_code: "PHT5-W02",
+      category: "lab"
+    },
+    {
+      session_no: 5,
+      title: "แสง ทัศนศาสตร์ และกลไกการมองเห็น",
+      description: "การสะท้อน การหักเห เลนส์นูน เลนส์เว้า และความผิดปกติของสายตา",
+      linked_worksheet_code: "PHT5-W03",
+      category: "lecture"
+    },
+    {
+      session_no: 6,
+      title: "ปฏิบัติการทดสอบสายตาและการหักเหแสงผ่านเลนส์ (Lab W03)",
+      description: "การทดลองวัดจุดโฟกัสเลนส์แว่นตา แผ่นวัดสายตา Snellen Chart ส่งใบงานที่ 3",
+      linked_worksheet_code: "PHT5-W03",
+      category: "lab"
+    },
+    {
+      session_no: 7,
+      title: "ไฟฟ้าสถิตและศักย์ไฟฟ้าเยื่อหุ้มเซลล์",
+      description: "ประจุไฟฟ้า สนามไฟฟ้า ศักย์ไฟฟ้าชีวภาพ และสมการ Nernst ของเซลล์ประสาท",
+      linked_worksheet_code: "PHT5-W04",
+      category: "lecture"
+    },
+    {
+      session_no: 8,
+      title: "แบบจำลองสัญญาณไฟฟ้าหัวใจและ ECG (Lab W04)",
+      description: "การทดลองวัดสัญญาณไฟฟ้าจำลองและการอ่านกราฟคลื่นไฟฟ้าหัวใจเบื้องต้น ส่งใบงานที่ 4",
+      linked_worksheet_code: "PHT5-W04",
+      category: "lab"
+    },
+    {
+      session_no: 9,
+      title: "ไฟฟ้ากระแสตรงและเซนเซอร์ชีวการแพทย์",
+      description: "กฎของโอห์ม วงจรอนุกรม-ขนาน และหลักการทรานสดิวเซอร์เซนเซอร์ทางการแพทย์",
+      linked_worksheet_code: "PHT5-W05",
+      category: "lecture"
+    },
+    {
+      session_no: 10,
+      title: "วงจรเซนเซอร์วัดชีพจรและการเชื่อมต่อไมโครคอนโทรลเลอร์ (Lab W05)",
+      description: "ปฏิบัติการประกอบวงจร PPG วัดชีพจรด้วยแสงและบันทึกสัญญาณ ส่งใบงานที่ 5",
+      linked_worksheet_code: "PHT5-W05",
+      category: "lab"
+    },
+    {
+      session_no: 11,
+      title: "แม่เหล็กไฟฟ้าและการเหนี่ยวนำในอุปกรณ์การแพทย์",
+      description: "สนามแม่เหล็ก แรงลอเรนซ์ กฎของฟาราเดย์ และหลักการทำงานของมอเตอร์ปั๊มสารน้ำ",
+      linked_worksheet_code: "PHT5-W06",
+      category: "lecture"
+    },
+    {
+      session_no: 12,
+      title: "ฟิสิกส์ของการสร้างภาพด้วยคลื่นแม่เหล็กไฟฟ้า MRI (Lab W06)",
+      description: "ปฏิบัติการศึกษาหลักการ Magnetic Resonance และแบบจำลองการสร้างภาพ ส่งใบงานที่ 6",
+      linked_worksheet_code: "PHT5-W06",
+      category: "lab"
+    },
+    {
+      session_no: 13,
+      title: "คลื่นแม่เหล็กไฟฟ้าและรังสีบำบัด",
+      description: "สเปกตรัมคลื่นแม่เหล็กไฟฟ้า รังสีอินฟราเรด รังสี UV และการประยุกต์บำบัดทางกายภาพ",
+      linked_worksheet_code: "PHT5-W07",
+      category: "lecture"
+    },
+    {
+      session_no: 14,
+      title: "สเปกตรัมแสงและฟิสิกส์ของ Pulse Oximeter (Lab W07)",
+      description: "ศึกษาการดูดกลืนแสงของฮีโมโกลบินและการวัดออกซิเจนในเลือด ส่งใบงานที่ 7",
+      linked_worksheet_code: "PHT5-W07",
+      category: "lab"
+    },
+    {
+      session_no: 15,
+      title: "ฟิสิกส์อะตอม รังสีเอกซ์ และการตรวจวินิจฉัย",
+      description: "กำเนิดรังสีเอกซ์ การลดทอนของรังสีในกระดูกและเนื้อเยื่ออ่อน หลักการเครื่อง CT Scan",
+      linked_worksheet_code: "PHT5-W08",
+      category: "lecture"
+    },
+    {
+      session_no: 16,
+      title: "ความปลอดภัยทางรังสีวิทยาและเวชศาสตร์นิวเคลียร์",
+      description: "การวัดปริมาณรังสี (Dosimetry) การป้องกันอันตรายจากรังสี และสารกัมมันตรังสีทางการแพทย์",
+      linked_worksheet_code: "PHT5-W08",
+      category: "lecture"
+    },
+    {
+      session_no: 17,
+      title: "แบบจำลองการดูดกลืนและการลดทอนรังสีในเนื้อเยื่อ (Lab W08)",
+      description: "ปฏิบัติการวัดการลดทอนของแสงผ่านตัวกลางความหนาแน่นต่างๆ ส่งใบงานที่ 8",
+      linked_worksheet_code: "PHT5-W08",
+      category: "lab"
+    },
+    {
+      session_no: 18,
+      title: "บูรณาการโครงงานนวัตกรรมเฮลธ์เทค ม.5: การออกแบบโซลูชัน",
+      description: "ระดมความคิด วิเคราะห์ปัญหา ออกแบบระบบฮาร์ดแวร์/ซอฟต์แวร์สุขภาพเทคโนโลยี",
+      linked_worksheet_code: "PHT5-W09",
+      category: "project"
+    },
+    {
+      session_no: 19,
+      title: "ปฏิบัติการพัฒนาชิ้นงานต้นแบบสิ่งประดิษฐ์และทดสอบ (Lab W09)",
+      description: "พัฒนาต้นแบบอุปกรณ์เฮลธ์เทค ทดสอบฟังก์ชัน เก็บข้อมูลการใช้งาน ส่งใบงานที่ 9",
+      linked_worksheet_code: "PHT5-W09",
+      category: "project"
+    },
+    {
+      session_no: 20,
+      title: "การประกวดนำเสนอนวัตกรรมและการประเมินผลปิดภาคเรียน",
+      description: "นำเสนอชิ้นงานต้นแบบต่อคณะครูผู้ประเมินและสะท้อนผลการเรียนรู้รายบุคคล",
+      linked_worksheet_code: "PHT5-W09",
+      category: "project"
+    }
+  ],
+
+  getDefaultSessions(grade) {
+    const list = grade === "M5" ? this.DEFAULT_M5_SESSIONS : this.DEFAULT_M4_SESSIONS;
+    return JSON.parse(JSON.stringify(list));
+  },
+
+  listSessions(session, payload, repository) {
+    const { academic_year_id, grade } = payload || {};
+    if (!academic_year_id || !grade) {
+      throw new Error("INVALID_REQUEST: โปรดระบุ academic_year_id และ grade");
+    }
+
+    const snapshot = repository.findSessionSnapshot(academic_year_id, grade);
+    if (snapshot && snapshot.sessions_json) {
+      let sessions = [];
+      try {
+        sessions = typeof snapshot.sessions_json === "string" 
+          ? JSON.parse(snapshot.sessions_json) 
+          : snapshot.sessions_json;
+      } catch (e) {
+        sessions = this.getDefaultSessions(grade);
+      }
+      return {
+        ok: true,
+        data: {
+          academic_year_id,
+          grade,
+          is_snapshot: true,
+          version_no: snapshot.version_no || 1,
+          updated_at: snapshot.updated_at || snapshot.created_at,
+          sessions
+        }
+      };
+    }
+
+    // Default template fallback if no snapshot recorded yet
+    return {
+      ok: true,
+      data: {
+        academic_year_id,
+        grade,
+        is_snapshot: false,
+        version_no: 0,
+        updated_at: null,
+        sessions: this.getDefaultSessions(grade)
+      }
+    };
+  },
+
+  saveSnapshot(session, payload, repository) {
+    Authorization.enforceTeacher(session);
+    const { academic_year_id, grade, sessions } = payload || {};
+
+    if (!academic_year_id || !grade) {
+      throw new Error("INVALID_REQUEST: โปรดระบุ academic_year_id และ grade");
+    }
+    if (!Array.isArray(sessions) || sessions.length === 0) {
+      throw new Error("INVALID_SESSIONS: ข้อมูลรายการแผนการเรียนต้องเป็น Array และไม่ว่างเปล่า");
+    }
+
+    // Sanitize sessions list
+    const sanitizedSessions = sessions.map((s, idx) => ({
+      session_no: s.session_no || (idx + 1),
+      title: String(s.title || "").trim(),
+      description: String(s.description || "").trim(),
+      linked_worksheet_code: s.linked_worksheet_code ? String(s.linked_worksheet_code).trim() : "",
+      category: s.category || "lecture"
+    }));
+
+    const existing = repository.findSessionSnapshot(academic_year_id, grade);
+    const now = new Date().toISOString();
+    const versionNo = existing ? ((existing.version_no || 1) + 1) : 1;
+    const snapshotId = existing ? existing.snapshot_id : `snp_${academic_year_id}_${grade}_${Date.now()}`;
+
+    const record = {
+      snapshot_id: snapshotId,
+      academic_year_id,
+      grade,
+      version_no: versionNo,
+      sessions_json: JSON.stringify(sanitizedSessions),
+      created_at: existing ? existing.created_at : now,
+      updated_at: now,
+      updated_by_uid: session.principal_uid || "teacher"
+    };
+
+    repository.saveSessionSnapshot(record);
+
+    return {
+      ok: true,
+      data: {
+        snapshot_id: snapshotId,
+        academic_year_id,
+        grade,
+        version_no: versionNo,
+        updated_at: now,
+        count: sanitizedSessions.length,
+        message_th: `บันทึก Snapshot แผนการเรียนรู้ประจำปีการศึกษา ${academic_year_id} (${grade}) เรียบร้อยแล้ว (เวอร์ชัน ${versionNo})`
+      }
+    };
+  }
+};
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = SessionService;
+}
+
+// ==============================================================================
 // MODULE: TeacherService.gs
 // ==============================================================================
 
@@ -3118,6 +3716,7 @@ const TeacherService = {
         roll_no: Number(enr.roll_no),
         code_5_digit: student.code_5_digit,
         display_name: student.display_name,
+        photo_url: student.photo_url || null,
         room: enr.room,
         submitted_count: submittedCount,
         graded_count: gradedCount,
@@ -3626,6 +4225,7 @@ if (typeof module !== "undefined" && typeof require !== "undefined") {
   global.EvidenceService = global.EvidenceService || require("./EvidenceService.gs");
   global.ProjectService = global.ProjectService || require("./ProjectService.gs");
   global.AcademicYearService = global.AcademicYearService || require("./AcademicYearService.gs");
+  global.SessionService = global.SessionService || require("./SessionService.gs");
   global.SheetRepository = global.SheetRepository || require("./SheetRepository.gs");
 }
 
@@ -4906,6 +5506,16 @@ function api(request, injectedRepo = null) {
       return { ...res, request_id: requestId };
     }
 
+    if (action === "student.uploadProfilePhoto") {
+      const res = StudentService.uploadProfilePhoto(session, payload, repo);
+      return { ...res, request_id: requestId };
+    }
+
+    if (action === "student.removeProfilePhoto") {
+      const res = StudentService.removeProfilePhoto(session, payload, repo);
+      return { ...res, request_id: requestId };
+    }
+
     // 7. Submissions & Upload Lifecycle
     if (action === "submissions.begin") {
       const res = SubmissionService.beginUpload(session, payload, repo);
@@ -5007,6 +5617,17 @@ function api(request, injectedRepo = null) {
 
     if (action === "teacher.importRoster") {
       const res = AcademicYearService.importRoster(session, payload, repo);
+      return { ...res, request_id: requestId };
+    }
+
+    // 11. Session Plan Snapshots per Academic Year
+    if (action === "sessions.list") {
+      const res = SessionService.listSessions(session, payload, repo);
+      return { ...res, request_id: requestId };
+    }
+
+    if (action === "sessions.saveSnapshot") {
+      const res = SessionService.saveSnapshot(session, payload, repo);
       return { ...res, request_id: requestId };
     }
 

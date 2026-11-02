@@ -18,6 +18,7 @@ if (typeof module !== "undefined" && typeof require !== "undefined") {
   global.EvidenceService = global.EvidenceService || require("./EvidenceService.gs");
   global.ProjectService = global.ProjectService || require("./ProjectService.gs");
   global.AcademicYearService = global.AcademicYearService || require("./AcademicYearService.gs");
+  global.SessionService = global.SessionService || require("./SessionService.gs");
   global.SheetRepository = global.SheetRepository || require("./SheetRepository.gs");
 }
 
@@ -1298,6 +1299,16 @@ function api(request, injectedRepo = null) {
       return { ...res, request_id: requestId };
     }
 
+    if (action === "student.uploadProfilePhoto") {
+      const res = StudentService.uploadProfilePhoto(session, payload, repo);
+      return { ...res, request_id: requestId };
+    }
+
+    if (action === "student.removeProfilePhoto") {
+      const res = StudentService.removeProfilePhoto(session, payload, repo);
+      return { ...res, request_id: requestId };
+    }
+
     // 7. Submissions & Upload Lifecycle
     if (action === "submissions.begin") {
       const res = SubmissionService.beginUpload(session, payload, repo);
@@ -1399,6 +1410,17 @@ function api(request, injectedRepo = null) {
 
     if (action === "teacher.importRoster") {
       const res = AcademicYearService.importRoster(session, payload, repo);
+      return { ...res, request_id: requestId };
+    }
+
+    // 11. Session Plan Snapshots per Academic Year
+    if (action === "sessions.list") {
+      const res = SessionService.listSessions(session, payload, repo);
+      return { ...res, request_id: requestId };
+    }
+
+    if (action === "sessions.saveSnapshot") {
+      const res = SessionService.saveSnapshot(session, payload, repo);
       return { ...res, request_id: requestId };
     }
 
