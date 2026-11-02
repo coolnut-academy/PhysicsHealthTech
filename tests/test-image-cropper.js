@@ -109,3 +109,4 @@ assert.strictEqual(cropper.panY, 0);
 console.log('  ✔ Test 6: Reset transformation state OK');
 
 console.log('✔ All ImageCropper Unit Tests Passed!\n');
+

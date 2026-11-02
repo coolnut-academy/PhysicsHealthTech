@@ -87,7 +87,14 @@ class SheetRepository {
       const ss = this.getGasSpreadsheet_();
       const sheet = ss.getSheetByName(tableName);
       if (!sheet) return;
-      const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
+      let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
+      const missingKeys = Object.keys(rowObj).filter(k => !k.startsWith("_") && !headers.includes(k));
+      if (missingKeys.length > 0) {
+        const startCol = headers.length + 1;
+        sheet.getRange(1, startCol, 1, missingKeys.length).setValues([missingKeys]);
+        sheet.getRange(1, startCol, 1, missingKeys.length).setFontWeight("bold").setBackground("#eef3f9");
+        headers = headers.concat(missingKeys);
+      }
       const rowValues = headers.map(h => {
         let val = rowObj[h];
         if (val === undefined || val === null) val = "";
@@ -111,7 +118,14 @@ class SheetRepository {
         this.appendGasRow_(tableName, rowObj);
         return;
       }
-      const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
+      let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn() || 1).getValues()[0];
+      const missingKeys = Object.keys(rowObj).filter(k => !k.startsWith("_") && !headers.includes(k));
+      if (missingKeys.length > 0) {
+        const startCol = headers.length + 1;
+        sheet.getRange(1, startCol, 1, missingKeys.length).setValues([missingKeys]);
+        sheet.getRange(1, startCol, 1, missingKeys.length).setFontWeight("bold").setBackground("#eef3f9");
+        headers = headers.concat(missingKeys);
+      }
       const rowValues = headers.map(h => {
         let val = rowObj[h];
         if (val === undefined || val === null) val = "";
